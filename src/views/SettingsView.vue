@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, toRaw } from 'vue';
 import { storage } from '../utils/storage';
-import type { Settings } from '../types';
+import type { Settings, TriggerSequence } from '../types';
 import Input from '../components/ui/Input.vue';
 import Button from '../components/ui/Button.vue';
 import Dropdown from '../components/ui/Dropdown.vue';
+import { browser } from 'wxt/browser';
 
 const settingsForm = ref<Settings | null>(null);
 const isLoading = ref(true);
@@ -21,6 +22,12 @@ const languageOptions = [
   { label: 'English', value: 'en' },
 ];
 
+const hasDuplicates = computed(() => {
+  if (!settingsForm.value) return false;
+  const values = settingsForm.value.triggerSequences.map(s => s.value);
+  return new Set(values).size !== values.length;
+});
+
 onMounted(async () => {
   try {
     settingsForm.value = await storage.getSettings();
@@ -34,13 +41,33 @@ onMounted(async () => {
 const handleSave = async () => {
   if (!settingsForm.value) return;
   try {
-    await storage.saveSettings(settingsForm.value);
+    await storage.saveSettings(toRaw(settingsForm.value));
+    const newSettings = await storage.getSettings();
+    console.log('AI-Prompts: Re-retrieved settings immediately after save:', newSettings);
+    browser.runtime.sendMessage({ type: 'UPDATE_SETTINGS' });
     showSuccessMessage.value = true;
     setTimeout(() => {
       showSuccessMessage.value = false;
     }, 3000);
   } catch (error) {
     console.error('Failed to save settings:', error);
+  }
+};
+
+const addSequence = () => {
+  if (!settingsForm.value) return;
+  settingsForm.value.triggerSequences.push({
+    id: `seq-${Date.now()}`,
+    value: '',
+    enabled: true,
+  });
+};
+
+const removeSequence = (id: string) => {
+  if (!settingsForm.value) return;
+  const index = settingsForm.value.triggerSequences.findIndex(s => s.id === id);
+  if (index > -1) {
+    settingsForm.value.triggerSequences.splice(index, 1);
   }
 };
 </script>
@@ -64,9 +91,20 @@ const handleSave = async () => {
         <Dropdown v-model="settingsForm.language" :options="languageOptions" id="language" class="w-48" />
       </div>
 
-      <div class="setting-item">
-        <label for="triggerKey" class="setting-label">快捷触发键</label>
-        <Input v-model="settingsForm.triggerKey" id="triggerKey" placeholder="例如：@@" class="w-48" />
+      <div class="space-y-4 py-4 border-t border-b border-light-border dark:border-dark-border">
+        <div class="flex justify-between items-center">
+          <label class="setting-label">快捷触发序列</label>
+          <Button type="button" variant="secondary" @click="addSequence">添加序列</Button>
+        </div>
+        <p v-if="hasDuplicates" class="text-danger text-sm">检测到重复的触发序列，请修正。</p>
+        <div v-for="(sequence, index) in settingsForm.triggerSequences" :key="sequence.id" class="flex items-center space-x-3">
+          <Input v-model="sequence.value" :placeholder="`序列 ${index + 1}`" class="flex-grow" />
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" v-model="sequence.enabled" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/50 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+          </label>
+          <Button type="button" variant="danger" @click="removeSequence(sequence.id)">删除</Button>
+        </div>
       </div>
 
       <div class="setting-item">

@@ -13,10 +13,15 @@ const STORES = {
 
 export class StorageManager {
   private db: IDBDatabase | null = null
+  private initPromise: Promise<void> | null = null
 
   // 初始化数据库
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+  init(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise
+    }
+
+    this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION)
 
       request.onerror = () => reject(request.error)
@@ -54,6 +59,7 @@ export class StorageManager {
         }
       }
     })
+    return this.initPromise
   }
 
   // 通用的事务操作方法
@@ -62,6 +68,7 @@ export class StorageManager {
     mode: IDBTransactionMode,
     operation: (store: IDBObjectStore) => IDBRequest<T>
   ): Promise<T> {
+    await this.init()
     if (!this.db) throw new Error('Database not initialized')
 
     return new Promise((resolve, reject) => {
@@ -145,11 +152,22 @@ export class StorageManager {
 
   // 设置相关操作
   async getSettings(): Promise<Settings> {
-    const settings = await this.transaction(STORES.SETTINGS, 'readonly', store => store.get('main'))
-    return settings || this.getDefaultSettings()
+    const settings = await this.transaction(STORES.SETTINGS, 'readonly', store => store.get('main')) as any
+    const defaultSettings = this.getDefaultSettings();
+
+    // 向上兼容：处理旧数据结构迁移
+    if (settings && settings.triggerKey && !settings.triggerSequences) {
+        settings.triggerSequences = [{ id: 'default-1', value: settings.triggerKey, enabled: true }];
+        delete settings.triggerKey;
+        // 立即保存迁移后的设置
+        await this.saveSettings(settings);
+    }
+
+    return { ...defaultSettings, ...settings }
   }
 
   async saveSettings(settings: Settings): Promise<void> {
+    console.log('AI-Prompts: Saving settings object:', settings)
     await this.transaction(STORES.SETTINGS, 'readwrite', store =>
       store.put({ key: 'main', ...settings })
     )
@@ -159,7 +177,7 @@ export class StorageManager {
     return {
       theme: 'system',
       language: 'zh',
-      triggerKey: '@@',
+      triggerSequences: [{ id: 'default-1', value: '@@', enabled: true }],
       enableQuickInsert: true,
       enableKeyboardShortcuts: true,
       enableNotifications: true,

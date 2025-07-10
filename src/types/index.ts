@@ -25,11 +25,18 @@ export interface Category {
   isCustom: boolean
 }
 
+// 快捷键序列
+export interface TriggerSequence {
+  id: string
+  value: string
+  enabled: boolean
+}
+
 // 用户设置
 export interface Settings {
   theme: 'light' | 'dark' | 'system'
   language: 'en' | 'zh'
-  triggerKey: string  // 触发快捷键，如 '@@' 或 '/prompt'
+  triggerSequences: TriggerSequence[]
   enableQuickInsert: boolean
   enableKeyboardShortcuts: boolean
   enableNotifications: boolean
