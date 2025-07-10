@@ -1,10 +1,28 @@
 <script setup lang="ts">
 import type { Prompt } from '@/types'
-import { defineProps } from 'vue'
+import { defineProps, defineEmits } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   prompt: Prompt
 }>()
+
+const emit = defineEmits<{
+  (e: 'edit', prompt: Prompt): void
+  (e: 'delete', id: string): void
+  (e: 'toggle-favorite', prompt: Prompt): void
+}>()
+
+const onEdit = () => {
+  emit('edit', props.prompt)
+}
+
+const onDelete = () => {
+  emit('delete', props.prompt.id)
+}
+
+const onToggleFavorite = () => {
+  emit('toggle-favorite', props.prompt)
+}
 </script>
 
 <template>
@@ -12,9 +30,15 @@ defineProps<{
     <div class="prompt-card-header">
       <div class="prompt-card-title">{{ prompt.title }}</div>
       <div class="prompt-card-actions">
-        <button class="action-btn">✏️</button>
-        <button class="action-btn">🗑️</button>
-        <button class="action-btn">⭐</button>
+        <button class="action-btn" @click="onEdit">✏️</button>
+        <button class="action-btn" @click="onDelete">🗑️</button>
+        <button 
+          class="action-btn" 
+          :class="{ 'text-yellow-400': prompt.isFavorite }" 
+          @click="onToggleFavorite"
+        >
+          ⭐
+        </button>
       </div>
     </div>
     <div class="prompt-card-content">

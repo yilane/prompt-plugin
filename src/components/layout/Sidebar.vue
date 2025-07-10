@@ -2,53 +2,53 @@
   <div class="sidebar bg-white rounded-lg p-5 border border-gray-200">
     <ul class="sidebar-menu space-y-2">
       <li>
-        <a href="#" class="sidebar-link active">
+        <router-link to="/" class="sidebar-link">
           <span class="icon">📋</span>
           <span>我的提示词</span>
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#" class="sidebar-link">
-          <span class="icon">🏪</span>
-          <span>提示词库</span>
-        </a>
-      </li>
-      <li>
-        <a href="#" class="sidebar-link">
+        <router-link to="/categories" class="sidebar-link">
           <span class="icon">📁</span>
           <span>分类管理</span>
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#" class="sidebar-link">
+        <router-link to="/prompt-lib" class="sidebar-link">
+          <span class="icon">🏪</span>
+          <span>提示词库</span>
+        </router-link>
+      </li>
+      <li>
+        <router-link to="/favorites" class="sidebar-link">
           <span class="icon">⭐</span>
           <span>收藏夹</span>
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#" class="sidebar-link">
+        <router-link to="/stats" class="sidebar-link">
           <span class="icon">📊</span>
           <span>使用统计</span>
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#" class="sidebar-link">
+        <router-link to="/settings" class="sidebar-link">
           <span class="icon">⚙️</span>
           <span>设置</span>
-        </a>
+        </router-link>
       </li>
       <li>
-        <a href="#" class="sidebar-link">
+        <router-link to="/import-export" class="sidebar-link">
           <span class="icon">📤</span>
           <span>导入导出</span>
-        </a>
+        </router-link>
       </li>
     </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-// No script logic needed for this static component yet.
+import { RouterLink } from 'vue-router'
 </script>
 
 <style scoped>
@@ -69,7 +69,7 @@
   color: #2c3e50;
 }
 
-.sidebar-link.active {
+.sidebar-link.router-link-active {
   background-color: #e3f2fd;
   color: #3498db;
   font-weight: 600;
