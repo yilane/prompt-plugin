@@ -1,12 +1,12 @@
-import type { Prompt, Category, Settings, UsageStats } from '@/types'
+import type { Prompt, Category, Settings, UsageStats } from '../types'
 
-const DB_NAME = 'PromptPluginDB'
-const DB_VERSION = 1
+const DB_NAME = 'AI-Prompts-DB'
+const DB_VERSION = 2
 
 // 数据表名
 const STORES = {
   PROMPTS: 'prompts',
-  CATEGORIES: 'categories', 
+  CATEGORIES: 'categories',
   SETTINGS: 'settings',
   USAGE_STATS: 'usageStats'
 } as const
@@ -126,6 +126,10 @@ export class StorageManager {
     await this.transaction(STORES.CATEGORIES, 'readwrite', store => store.delete(id))
   }
 
+  async saveCategory(category: Category): Promise<void> {
+    await this.transaction(STORES.CATEGORIES, 'readwrite', store => store.put(category));
+  }
+
   // 设置相关操作
   async getSettings(): Promise<Settings> {
     const settings = await this.transaction(STORES.SETTINGS, 'readonly', store => store.get('main'))
@@ -133,14 +137,14 @@ export class StorageManager {
   }
 
   async saveSettings(settings: Settings): Promise<void> {
-    await this.transaction(STORES.SETTINGS, 'readwrite', store => 
+    await this.transaction(STORES.SETTINGS, 'readwrite', store =>
       store.put({ key: 'main', ...settings })
     )
   }
 
   private getDefaultSettings(): Settings {
     return {
-      theme: 'auto',
+      theme: 'system',
       language: 'zh',
       triggerKey: '@@',
       enableQuickInsert: true,
@@ -158,7 +162,7 @@ export class StorageManager {
 
   async updateUsageStats(promptId: string): Promise<void> {
     const existing = await this.transaction(STORES.USAGE_STATS, 'readonly', store => store.get(promptId))
-    
+
     const stats: UsageStats = {
       promptId,
       count: existing ? existing.count + 1 : 1,
@@ -172,7 +176,7 @@ export class StorageManager {
   async exportData(): Promise<string> {
     const [prompts, categories, settings] = await Promise.all([
       this.getAllPrompts(),
-      this.getAllCategories(), 
+      this.getAllCategories(),
       this.getSettings()
     ])
 
@@ -185,7 +189,7 @@ export class StorageManager {
 
   async importData(jsonData: string): Promise<void> {
     const data = JSON.parse(jsonData)
-    
+
     if (data.data.prompts) {
       for (const prompt of data.data.prompts) {
         await this.savePrompt(prompt)
@@ -208,7 +212,7 @@ export class StorageManager {
     if (!this.db) return
 
     const transaction = this.db.transaction(Object.values(STORES), 'readwrite')
-    
+
     for (const storeName of Object.values(STORES)) {
       transaction.objectStore(storeName).clear()
     }
@@ -230,4 +234,4 @@ export const storage = new StorageManager()
 // 初始化数据库的便捷函数
 export async function initializeDatabase(): Promise<void> {
   await storage.init()
-} 
+}

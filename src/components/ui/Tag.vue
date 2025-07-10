@@ -2,12 +2,12 @@
   <span :class="tagClasses" @click="handleClick">
     <!-- 图标 -->
     <slot name="icon" />
-    
+
     <!-- 内容 -->
     <span class="truncate">
       <slot>{{ content }}</slot>
     </span>
-    
+
     <!-- 关闭按钮 -->
     <button
       v-if="closable"
@@ -24,6 +24,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+
+defineOptions({
+  name: 'UiTag'
+})
 
 interface TagProps {
   content?: string
@@ -64,7 +68,7 @@ const tagClasses = computed(() => {
   }
 
   // 圆角样式
-  const roundClasses = props.round 
+  const roundClasses = props.round
     ? sizeClasses[props.size].includes('px-2 ') ? 'rounded-full' : 'rounded-full'
     : 'rounded-md'
 
@@ -82,43 +86,43 @@ const tagClasses = computed(() => {
         'focus-within:ring-gray-500'
       ],
       light: [
-        'bg-gray-50 text-gray-600 border border-transparent',
-        'hover:bg-gray-100',
+        'bg-gray-100 text-gray-800 border border-transparent',
+        'hover:bg-gray-200',
         'focus-within:ring-gray-500'
       ]
     },
     primary: {
       filled: [
-        'bg-blue-600 text-white border border-blue-600',
-        'hover:bg-blue-700',
-        'focus-within:ring-blue-500'
+        'bg-primary text-primary-foreground border border-primary',
+        'hover:bg-primary-hover',
+        'focus-within:ring-primary'
       ],
       outlined: [
-        'bg-transparent text-blue-600 border border-blue-600',
-        'hover:bg-blue-50',
-        'focus-within:ring-blue-500'
+        'bg-transparent text-primary border border-primary',
+        'hover:bg-primary/10',
+        'focus-within:ring-primary'
       ],
       light: [
-        'bg-blue-50 text-blue-700 border border-transparent',
-        'hover:bg-blue-100',
-        'focus-within:ring-blue-500'
+        'bg-primary/10 text-primary border border-transparent',
+        'hover:bg-primary/20',
+        'focus-within:ring-primary'
       ]
     },
     success: {
       filled: [
-        'bg-green-600 text-white border border-green-600',
-        'hover:bg-green-700',
-        'focus-within:ring-green-500'
+        'bg-success text-success-foreground border border-success',
+        'hover:bg-success-hover',
+        'focus-within:ring-success'
       ],
       outlined: [
-        'bg-transparent text-green-600 border border-green-600',
-        'hover:bg-green-50',
-        'focus-within:ring-green-500'
+        'bg-transparent text-success border border-success',
+        'hover:bg-success/10',
+        'focus-within:ring-success'
       ],
       light: [
-        'bg-green-50 text-green-700 border border-transparent',
-        'hover:bg-green-100',
-        'focus-within:ring-green-500'
+        'bg-success/10 text-success border border-transparent',
+        'hover:bg-success/20',
+        'focus-within:ring-success'
       ]
     },
     warning: {
@@ -140,19 +144,19 @@ const tagClasses = computed(() => {
     },
     danger: {
       filled: [
-        'bg-red-600 text-white border border-red-600',
-        'hover:bg-red-700',
-        'focus-within:ring-red-500'
+        'bg-danger text-danger-foreground border border-danger',
+        'hover:bg-danger/90',
+        'focus-within:ring-danger'
       ],
       outlined: [
-        'bg-transparent text-red-600 border border-red-600',
-        'hover:bg-red-50',
-        'focus-within:ring-red-500'
+        'bg-transparent text-danger border border-danger',
+        'hover:bg-danger/10',
+        'focus-within:ring-danger'
       ],
       light: [
-        'bg-red-50 text-red-700 border border-transparent',
-        'hover:bg-red-100',
-        'focus-within:ring-red-500'
+        'bg-danger/10 text-danger border border-transparent',
+        'hover:bg-danger/20',
+        'focus-within:ring-danger'
       ]
     },
     info: {
@@ -202,4 +206,4 @@ const handleClick = (event: MouseEvent) => {
     emit('click', event)
   }
 }
-</script> 
+</script>

@@ -1,35 +1,23 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
-import Sidebar from '@/components/layout/Sidebar.vue'
+import Sidebar from './components/layout/Sidebar.vue'
+import { useTheme } from './composables/useTheme'
+
+useTheme()
 </script>
 
 <template>
-  <div class="management-interface">
+  <div class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <Sidebar />
-    <main class="main-content">
+    <main class="flex-1 overflow-y-auto">
       <RouterView />
     </main>
   </div>
 </template>
 
 <style>
-@import '@/assets/base.css';
-
-.management-interface {
-  display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 20px;
-  /* Using padding on the container instead of height */
-  padding: 20px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-}
-
-.main-content {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #e9ecef;
-  overflow-y: auto;
+#app {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 </style>

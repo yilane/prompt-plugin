@@ -1,8 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createMemoryHistory(),
   routes: [
     {
       path: '/',
@@ -13,6 +13,31 @@ const router = createRouter({
       path: '/categories',
       name: 'categories',
       component: () => import('../views/CategoryView.vue')
+    },
+    {
+      path: '/favorites',
+      name: 'favorites',
+      component: () => import('../views/FavoritesView.vue')
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/SettingsView.vue')
+    },
+    {
+      path: '/import-export',
+      name: 'import-export',
+      component: () => import('../views/ImportExportView.vue')
+    },
+    {
+      path: '/prompt-lib',
+      name: 'prompt-lib',
+      component: () => import('../views/PromptLibView.vue')
+    },
+    {
+      path: '/stats',
+      name: 'stats',
+      component: () => import('../views/StatsView.vue')
     }
   ]
 })

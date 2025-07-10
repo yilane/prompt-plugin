@@ -1,9 +1,12 @@
+import forms from '@tailwindcss/forms';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
+    "./entrypoints/**/*.{vue,js,ts,jsx,tsx,html}",
   ],
   theme: {
     extend: {
@@ -11,11 +14,16 @@ export default {
         // 根据UI原型重新定义颜色系统
         'primary': '#3498db',
         'primary-hover': '#2980b9',
+        'primary-foreground': '#ffffff',
         'secondary': '#6c757d',
         'secondary-hover': '#5a6268',
+        'secondary-foreground': '#ffffff',
         'success': '#27ae60',
         'success-hover': '#219653',
-        
+        'success-foreground': '#ffffff',
+        'danger': '#e74c3c',
+        'danger-foreground': '#ffffff',
+
         // 亮色模式
         'light-bg': '#f5f7fa',
         'light-surface': '#ffffff',
@@ -35,6 +43,6 @@ export default {
     },
   },
   plugins: [
-    require('@tailwindcss/forms'),
+    forms,
   ],
-} 
+}

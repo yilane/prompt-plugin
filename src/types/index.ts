@@ -27,13 +27,14 @@ export interface Category {
 // 用户设置
 export interface Settings {
   theme: 'light' | 'dark' | 'system'
-  language: 'zh' | 'en'
+  language: 'en' | 'zh'
   triggerKey: string  // 触发快捷键，如 '@@' 或 '/prompt'
   enableQuickInsert: boolean
   enableKeyboardShortcuts: boolean
   enableNotifications: boolean
   autoBackup: boolean
   maxRecentPrompts: number
+  categoryMigrationV1Done?: boolean
 }
 
 export interface DropdownOption {
@@ -82,4 +83,4 @@ export interface ExtensionResponse {
   success: boolean
   data?: any
   error?: string
-} 
+}

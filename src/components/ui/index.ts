@@ -5,5 +5,4 @@ export { default as Dropdown } from './Dropdown.vue'
 export { default as Tag } from './Tag.vue'
 export { default as Loading } from './Loading.vue'
 export { default as Textarea } from './Textarea.vue'
-
-export * from '@/types' 
+export * from '../../types' 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { storage } from '@/utils/storage'
-import type { Category } from '@/types'
-import Modal from '@/components/ui/Modal.vue'
-import Input from '@/components/ui/Input.vue'
-import Button from '@/components/ui/Button.vue'
+import { storage } from '../utils/storage'
+import type { Category } from '../types'
+import Modal from '../components/ui/Modal.vue'
+import Input from '../components/ui/Input.vue'
+import Button from '../components/ui/Button.vue'
 
 const categories = ref<Category[]>([])
 const isLoading = ref(true)
@@ -76,111 +76,50 @@ const handleDelete = async (id: string) => {
 </script>
 
 <template>
-  <div>
-    <div class="content-header">
-      <h3 class="content-title">分类管理</h3>
-      <button class="add-btn" @click="openCreateModal">+ 新增分类</button>
+  <div class="p-4 sm:p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-semibold text-text-main dark:text-dark-text-main">分类管理</h3>
+      <Button variant="primary" @click="openCreateModal">+ 新增分类</Button>
     </div>
 
     <div v-if="isLoading" class="text-center py-10">
       <p>正在加载...</p>
     </div>
 
-    <div v-else class="category-list">
-      <div v-for="category in categories" :key="category.id" class="category-item">
-        <div class="category-info">
-          <span class="category-icon">{{ category.icon }}</span>
+    <div v-else class="bg-light-surface dark:bg-dark-surface rounded-lg border border-light-border dark:border-dark-border overflow-hidden">
+      <div
+        v-for="(category, index) in categories"
+        :key="category.id"
+        class="flex justify-between items-center p-4"
+        :class="{ 'border-b border-light-border dark:border-dark-border': index < categories.length - 1 }"
+      >
+        <div class="flex items-center gap-4">
+          <span class="text-2xl">{{ category.icon }}</span>
           <div>
-            <div class="category-name">{{ category.name }}</div>
-            <div class="category-description">{{ category.description }}</div>
+            <div class="font-semibold text-text-main dark:text-dark-text-main">{{ category.name }}</div>
+            <div class="text-sm text-text-muted dark:text-dark-text-muted">{{ category.description }}</div>
           </div>
         </div>
-        <div class="category-actions">
+        <div class="flex gap-2">
           <Button variant="ghost" size="sm" @click="openEditModal(category)">编辑</Button>
-          <Button variant="danger" size="sm" outline @click="handleDelete(category.id)">删除</Button>
+          <Button variant="danger" size="sm" @click="handleDelete(category.id)">删除</Button>
         </div>
       </div>
     </div>
 
-    <Modal :is-open="isModalOpen" :title="modalTitle" @close="handleCancel">
-      <div class="p-4 space-y-4">
-        <Input v-model="form.name" label="分类名称" placeholder="例如：编程技巧" />
-        <Input v-model="form.icon" label="分类图标" placeholder="例如：💻" />
-        <Input v-model="form.description" label="分类描述" placeholder="关于这个分类的简短描述" />
-        <div class="flex justify-end gap-3 pt-4 border-t">
+    <Modal :is-open="isModalOpen" @close="handleCancel">
+       <div class="p-6">
+        <h3 class="text-lg font-semibold mb-4">{{ modalTitle }}</h3>
+        <div class="space-y-4">
+          <Input v-model="form.name" label="分类名称" placeholder="例如：编程技巧" />
+          <Input v-model="form.icon" label="分类图标" placeholder="例如：💻" />
+          <Input v-model="form.description" label="分类描述" placeholder="关于这个分类的简短描述" />
+        </div>
+        <div class="flex justify-end gap-3 pt-5 mt-5 border-t border-light-border dark:border-dark-border">
           <Button variant="secondary" @click="handleCancel">取消</Button>
-          <Button @click="handleSave">保存</Button>
+          <Button variant="primary" @click="handleSave">保存</Button>
         </div>
       </div>
     </Modal>
   </div>
 </template>
-
-<style scoped>
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.content-title {
-  font-size: 18px;
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.add-btn {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.category-list {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e9ecef;
-}
-
-.category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #f1f3f5;
-}
-
-.category-item:last-child {
-  border-bottom: none;
-}
-
-.category-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.category-icon {
-  font-size: 1.5rem;
-}
-
-.category-name {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.category-description {
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-
-.category-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-</style> 

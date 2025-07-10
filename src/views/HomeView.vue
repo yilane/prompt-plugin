@@ -1,46 +1,110 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { storage } from '@/utils/storage'
-import type { Prompt } from '@/types'
-import PromptCard from '@/components/business/PromptCard.vue'
-import Modal from '@/components/ui/Modal.vue'
-import PromptEditor from '@/components/business/PromptEditor.vue'
+import { ref, onMounted, onUnmounted, computed, toRaw } from 'vue'
+import { storage } from '../utils/storage'
+import type { Prompt, Category } from '../types'
+import eventBus from '../utils/eventBus'
+import PromptCard from '../components/business/PromptCard.vue'
+import Modal from '../components/ui/Modal.vue'
+import PromptEditor from '../components/business/PromptEditor.vue'
+import Button from '../components/ui/Button.vue';
+import SearchBox from '../components/ui/SearchBox.vue';
+import CategorySelector from '../components/business/CategorySelector.vue'
+import Grid from 'vue-virtual-scroll-grid'
 
 const prompts = ref<Prompt[]>([])
+const categories = ref<Category[]>([])
 const isLoading = ref(true)
-const isEditorOpen = ref(false)
+const isModalOpen = ref(false)
 const editingPrompt = ref<Prompt | null>(null)
+const searchQuery = ref('')
+const selectedCategoryId = ref('all')
 
-const modalTitle = computed(() => editingPrompt.value ? '编辑提示词' : '新增提示词')
+const filteredPrompts = computed(() => {
+  let promptsToFilter = prompts.value
+
+  // 1. Filter by category
+  if (selectedCategoryId.value && selectedCategoryId.value !== 'all') {
+    promptsToFilter = promptsToFilter.filter(prompt => prompt.category === selectedCategoryId.value)
+  }
+
+  // 2. Filter by search query
+  if (searchQuery.value) {
+    const lowerCaseQuery = searchQuery.value.toLowerCase()
+    promptsToFilter = promptsToFilter.filter(prompt => {
+      const inTitle = prompt.title.toLowerCase().includes(lowerCaseQuery)
+      const inDescription = prompt.description.toLowerCase().includes(lowerCaseQuery)
+      const inTags = prompt.tags.some(tag => tag.toLowerCase().includes(lowerCaseQuery))
+      return inTitle || inDescription || inTags
+    })
+  }
+
+  return promptsToFilter
+})
+
+const pageProvider = async (pageNumber: number, pageSize: number) => {
+  console.log('loading page', pageNumber)
+  const start = pageNumber * pageSize
+  const end = start + pageSize
+  // 使用 toRaw 获取原始数组，避免响应式代理带来的额外开销
+  return toRaw(filteredPrompts.value).slice(start, end)
+}
+
+const handleFavoriteUpdate = ({ id, isFavorite }: { id: string, isFavorite: boolean }) => {
+  prompts.value = prompts.value.map(p => {
+    if (p.id === id) {
+      return { ...p, isFavorite };
+    }
+    return p;
+  });
+};
 
 onMounted(async () => {
   try {
+    isLoading.value = true
     await storage.init()
-    prompts.value = await storage.getAllPrompts()
+
+    // Load prompts and categories in parallel
+    const [loadedPrompts, loadedCategories] = await Promise.all([
+      storage.getAllPrompts(),
+      storage.getAllCategories()
+    ]);
+
+    prompts.value = loadedPrompts
+    categories.value = [
+      { id: 'all', name: '全部', description: '', icon: '📚', sort: 0, isCustom: false },
+      ...loadedCategories
+    ];
+
+    // Dummy data check (can be removed in production)
     if (prompts.value.length === 0) {
       const dummyPrompt: Prompt = { id: '1', title: '产品需求文档模板', content: '请帮我编写一份产品需求文档...', description: '一个用于快速生成PRD的模板', category: '文档', tags: ['产品', '文档', '模板'], isCustom: false, createTime: new Date().toISOString(), updateTime: new Date().toISOString(), useCount: 15, rating: 5 };
       await storage.savePrompt(dummyPrompt);
       prompts.value.push(dummyPrompt);
     }
   } catch (error) {
-    console.error('Failed to load prompts:', error)
+    console.error('Failed to load initial data:', error)
   } finally {
     isLoading.value = false
   }
+  eventBus.on('favorite:toggle', handleFavoriteUpdate)
 })
 
-const openCreateEditor = () => {
+onUnmounted(() => {
+  eventBus.off('favorite:toggle', handleFavoriteUpdate);
+});
+
+const openAddModal = () => {
   editingPrompt.value = null
-  isEditorOpen.value = true
+  isModalOpen.value = true
 }
 
-const openEditEditor = (prompt: Prompt) => {
+const openEditModal = (prompt: Prompt) => {
   editingPrompt.value = prompt
-  isEditorOpen.value = true
+  isModalOpen.value = true
 }
 
-const handleCancel = () => {
-  isEditorOpen.value = false
+const closeModal = () => {
+  isModalOpen.value = false
   editingPrompt.value = null
 }
 
@@ -69,7 +133,7 @@ const handleSavePrompt = async (promptData: Partial<Prompt>) => {
   } catch (error) {
     console.error('Failed to save prompt:', error)
   } finally {
-    handleCancel()
+    closeModal()
   }
 }
 
@@ -85,84 +149,81 @@ const handleDeletePrompt = async (promptId: string) => {
 }
 
 const handleToggleFavorite = async (prompt: Prompt) => {
-  const updatedPrompt = { ...prompt, isFavorite: !prompt.isFavorite }
+  const newIsFavorite = !prompt.isFavorite;
+
+  // Step 1: Immediately update the local state for instant UI feedback.
+  prompts.value = prompts.value.map(p =>
+    p.id === prompt.id ? { ...p, isFavorite: newIsFavorite } : p
+  );
+
   try {
-    await storage.savePrompt(updatedPrompt)
-    const index = prompts.value.findIndex(p => p.id === prompt.id)
-    if (index !== -1) {
-      prompts.value[index] = updatedPrompt
-    }
+    // Step 2 & 3: Persist the change and then notify other components.
+    const rawPrompt = toRaw(prompt);
+    const updatedPromptForStorage = { ...rawPrompt, isFavorite: newIsFavorite };
+
+    await storage.savePrompt(updatedPromptForStorage);
+    eventBus.emit('favorite:toggle', { id: updatedPromptForStorage.id, isFavorite: updatedPromptForStorage.isFavorite });
+
   } catch (error) {
-    console.error('Failed to update favorite status:', error)
+    console.error('Failed to update favorite status:', error);
+    // On error, revert the UI change to maintain consistency.
+    prompts.value = prompts.value.map(p =>
+      p.id === prompt.id ? { ...p, isFavorite: !newIsFavorite } : p
+    );
   }
 }
 </script>
 
 <template>
-  <div>
-    <div class="content-header">
-      <h3 class="content-title">我的提示词</h3>
-      <button class="add-btn" @click="openCreateEditor">+ 新增提示词</button>
+  <div class="p-4 sm:p-6">
+    <div class="flex justify-between items-center mb-5">
+      <div class="flex-1">
+        <h3 class="text-lg font-semibold text-text-main dark:text-dark-text-main">我的提示词</h3>
+        <p class="text-sm text-text-muted dark:text-dark-text-muted mt-1">在这里管理您的所有个人提示词。</p>
+      </div>
+      <div class="ml-5">
+        <Button variant="primary" @click="openAddModal">添加新提示词</Button>
+      </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-10">
-      <p>正在加载...</p>
-    </div>
-    
-    <div v-else-if="prompts.length > 0" class="prompts-grid">
-      <PromptCard 
-        v-for="prompt in prompts" 
-        :key="prompt.id" 
-        :prompt="prompt"
-        @edit="openEditEditor"
-        @delete="handleDeletePrompt"
-        @toggle-favorite="handleToggleFavorite"
+    <div class="space-y-5 mb-5">
+      <SearchBox v-model="searchQuery" placeholder="搜索标题、描述或标签..." />
+      <CategorySelector
+        v-if="categories.length > 1"
+        :categories="categories"
+        v-model:selectedCategoryId="selectedCategoryId"
       />
     </div>
 
-    <div v-else class="text-center py-10 px-4 rounded-lg bg-gray-100">
-      <h3 class="text-lg font-semibold">暂无提示词</h3>
-      <p class="text-gray-500 mt-1">您还没有创建任何提示词。</p>
+    <div v-if="isLoading" class="text-center py-10">
+      正在加载...
     </div>
-    
-    <Modal :is-open="isEditorOpen" :title="modalTitle" @close="handleCancel">
-      <PromptEditor :prompt="editingPrompt" @save="handleSavePrompt" @cancel="handleCancel" />
+    <Grid
+      v-else-if="filteredPrompts.length > 0"
+      :key="`${selectedCategoryId}-${searchQuery}`"
+      class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4"
+      :length="filteredPrompts.length"
+      :page-size="20"
+      :page-provider="pageProvider"
+    >
+      <template #default="{ item, style }">
+        <div :style="style">
+          <PromptCard
+            :prompt="item"
+            @edit="openEditModal"
+            @delete="handleDeletePrompt"
+            @toggle-favorite="handleToggleFavorite"
+          />
+        </div>
+      </template>
+    </Grid>
+    <div v-else class="text-center py-10 text-gray-500">
+      <p v-if="searchQuery">未找到匹配的提示词。</p>
+      <p v-else>您还没有任何提示词。点击“添加新提示词”来创建一个吧！</p>
+    </div>
+
+    <Modal :is-open="isModalOpen" @close="closeModal">
+      <PromptEditor :prompt="editingPrompt" @save="handleSavePrompt" @cancel="closeModal" />
     </Modal>
   </div>
 </template>
-
-<style scoped>
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.content-title {
-  font-size: 18px;
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-.add-btn {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.add-btn:hover {
-  background: #219d52;
-}
-
-.prompts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-</style>

@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "AI提示词管理插件",
+  "description": "智能管理和快捷使用AI提示词的浏览器扩展",
+  "version": "1.0.0",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://chat.deepseek.com/*",
+    "https://www.doubao.com/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_title": "AI提示词管理"
+  },
+  "commands": {
+    "wxt:reload-extension": {
+      "description": "Reload the extension during development",
+      "suggested_key": {
+        "default": "Alt+R"
+      }
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:10323; object-src 'self';",
+    "sandbox": "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:10323; sandbox allow-scripts allow-forms allow-popups allow-modals; child-src 'self';"
+  }
+}
