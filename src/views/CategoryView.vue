@@ -5,6 +5,7 @@ import type { Category } from '../types'
 import Modal from '../components/ui/Modal.vue'
 import Input from '../components/ui/Input.vue'
 import Button from '../components/ui/Button.vue'
+import draggable from 'vuedraggable'
 
 const categories = ref<Category[]>([])
 const isLoading = ref(true)
@@ -17,7 +18,8 @@ const modalTitle = computed(() => editingCategory.value ? '编辑分类' : '新�
 onMounted(async () => {
   try {
     isLoading.value = true
-    categories.value = await storage.getAllCategories()
+    const loadedCategories = await storage.getAllCategories()
+    categories.value = loadedCategories.sort((a, b) => a.sort - b.sort)
   } catch (error) {
     console.error('Failed to load categories:', error)
   } finally {
@@ -73,6 +75,19 @@ const handleDelete = async (id: string) => {
     }
   }
 }
+
+const onDragEnd = async () => {
+  try {
+    const updatedCategories = categories.value.map((category, index) => {
+      return { ...category, sort: index }
+    })
+    await storage.updateCategoriesOrder(updatedCategories)
+    categories.value = updatedCategories
+  } catch (error) {
+    console.error('Failed to update categories order:', error)
+    // 可选择性地将列表恢复到之前的状态
+  }
+}
 </script>
 
 <template>
@@ -86,26 +101,37 @@ const handleDelete = async (id: string) => {
       <p>正在加载...</p>
     </div>
 
-    <div v-else class="bg-light-surface dark:bg-dark-surface rounded-lg border border-light-border dark:border-dark-border overflow-hidden">
-      <div
-        v-for="(category, index) in categories"
-        :key="category.id"
-        class="flex justify-between items-center p-4"
-        :class="{ 'border-b border-light-border dark:border-dark-border': index < categories.length - 1 }"
-      >
-        <div class="flex items-center gap-4">
-          <span class="text-2xl">{{ category.icon }}</span>
-          <div>
-            <div class="font-semibold text-text-main dark:text-dark-text-main">{{ category.name }}</div>
-            <div class="text-sm text-text-muted dark:text-dark-text-muted">{{ category.description }}</div>
+    <draggable
+      v-else
+      v-model="categories"
+      item-key="id"
+      handle=".handle"
+      class="bg-light-surface dark:bg-dark-surface rounded-lg border border-light-border dark:border-dark-border overflow-hidden"
+      animation="300"
+      @end="onDragEnd"
+    >
+      <template #item="{ element: category, index }">
+        <div
+          class="flex justify-between items-center p-4"
+          :class="{ 'border-b border-light-border dark:border-dark-border': index < categories.length - 1 }"
+        >
+          <div class="flex items-center gap-4">
+            <div class="handle cursor-move text-text-muted dark:text-dark-text-muted">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9h18M3 15h18" opacity="0.5"></path></svg>
+            </div>
+            <span class="text-2xl">{{ category.icon }}</span>
+            <div>
+              <div class="font-semibold text-text-main dark:text-dark-text-main">{{ category.name }}</div>
+              <div class="text-sm text-text-muted dark:text-dark-text-muted">{{ category.description }}</div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <Button variant="ghost" size="sm" @click="openEditModal(category)">编辑</Button>
+            <Button variant="danger" size="sm" @click="handleDelete(category.id)">删除</Button>
           </div>
         </div>
-        <div class="flex gap-2">
-          <Button variant="ghost" size="sm" @click="openEditModal(category)">编辑</Button>
-          <Button variant="danger" size="sm" @click="handleDelete(category.id)">删除</Button>
-        </div>
-      </div>
-    </div>
+      </template>
+    </draggable>
 
     <Modal :is-open="isModalOpen" @close="handleCancel">
        <div class="p-6">

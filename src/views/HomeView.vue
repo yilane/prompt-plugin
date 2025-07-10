@@ -19,8 +19,18 @@ const editingPrompt = ref<Prompt | null>(null)
 const searchQuery = ref('')
 const selectedCategoryId = ref('all')
 
+const promptsWithCategoryDetails = computed(() => {
+  const categoryMap = new Map(categories.value.map(c => [c.id, c]))
+  return prompts.value.map(p => {
+    return {
+      ...p,
+      categoryDetails: categoryMap.get(p.category)
+    }
+  })
+})
+
 const filteredPrompts = computed(() => {
-  let promptsToFilter = prompts.value
+  let promptsToFilter = promptsWithCategoryDetails.value
 
   // 1. Filter by category
   if (selectedCategoryId.value && selectedCategoryId.value !== 'all') {
@@ -71,8 +81,8 @@ onMounted(async () => {
 
     prompts.value = loadedPrompts
     categories.value = [
-      { id: 'all', name: '全部', description: '', icon: '📚', sort: 0, isCustom: false },
-      ...loadedCategories
+      { id: 'all', name: '全部', description: '', icon: '📚', sort: -1, isCustom: false },
+      ...loadedCategories.sort((a, b) => a.sort - b.sort)
     ];
 
     // Dummy data check (can be removed in production)

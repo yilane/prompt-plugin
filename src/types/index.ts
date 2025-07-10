@@ -12,6 +12,7 @@ export interface Prompt {
   useCount: number
   rating: number
   isFavorite?: boolean
+  categoryDetails?: Category
 }
 
 // 分类数据结构

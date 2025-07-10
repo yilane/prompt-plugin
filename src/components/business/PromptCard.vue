@@ -25,7 +25,13 @@ const emit = defineEmits(['edit', 'delete', 'toggle-favorite', 'copy'])
 
     <div class="flex-grow">
       <p class="text-sm text-text-content dark:text-dark-text-content mb-3 h-10 overflow-hidden">{{ prompt.description }}</p>
-      <div class="flex flex-wrap gap-2 mb-3">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <Tag
+          v-if="prompt.categoryDetails"
+          :content="prompt.categoryDetails.name"
+          size="xs"
+          class="!bg-blue-100 !text-blue-800 dark:!bg-blue-900 dark:!text-blue-200"
+        />
         <Tag v-for="tag in prompt.tags" :key="tag" :content="tag" size="xs" />
       </div>
     </div>

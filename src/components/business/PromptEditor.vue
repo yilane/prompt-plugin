@@ -43,7 +43,8 @@ watch(() => props.prompt, (newPrompt) => {
 
 onMounted(async () => {
   try {
-    categories.value = await storage.getAllCategories();
+    const loadedCategories = await storage.getAllCategories();
+    categories.value = loadedCategories.sort((a, b) => a.sort - b.sort);
   } catch (error) {
     console.error("Failed to load categories:", error);
     // Optionally handle error in UI

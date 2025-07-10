@@ -126,6 +126,19 @@ export class StorageManager {
     await this.transaction(STORES.CATEGORIES, 'readwrite', store => store.delete(id))
   }
 
+  async updateCategoriesOrder(categories: Category[]): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const transaction = this.db.transaction(STORES.CATEGORIES, 'readwrite');
+    const store = transaction.objectStore(STORES.CATEGORIES);
+    for (const category of categories) {
+      store.put(category);
+    }
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
   async saveCategory(category: Category): Promise<void> {
     await this.transaction(STORES.CATEGORIES, 'readwrite', store => store.put(category));
   }
