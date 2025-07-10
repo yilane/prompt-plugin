@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI提示词管理插件 - UI原型设计</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .design-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #34495e;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        /* 快捷输入界面 */
+        .quick-input-demo {
+            position: relative;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .chat-input-container {
+            position: relative;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .chat-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+
+        .trigger-hint {
+            position: absolute;
+            top: -30px;
+            right: 0;
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .trigger-hint::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 10px;
+            border: 6px solid transparent;
+            border-top-color: #3498db;
+        }
+
+        /* 弹窗界面 */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .popup-content {
+            background: white;
+            border-radius: 12px;
+            width: 600px;
+            max-height: 500px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .popup-header {
+            background: #3498db;
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .popup-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .search-bar {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .categories-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            overflow-x: auto;
+        }
+
+        .category-tab {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #6c757d;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .category-tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: white;
+        }
+
+        .prompts-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .prompt-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f1f3f5;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .prompt-item:hover {
+            background: #f8f9fa;
+        }
+
+        .prompt-item.selected {
+            background: #e3f2fd;
+            border-left: 4px solid #3498db;
+        }
+
+        .prompt-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .prompt-description {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .prompt-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        .popup-footer {
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .shortcut-hint {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        /* 管理界面 */
+        .management-interface {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .sidebar-menu a {
+            text-decoration: none;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-menu a.active {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .content-title {
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        .add-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .prompts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .prompt-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            background: #f8f9fa;
+        }
+
+        .prompt-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .prompt-card-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .prompt-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .action-btn:hover {
+            color: #3498db;
+        }
+
+        .prompt-card-content {
+            color: #495057;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .wireframe-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .management-interface {
+                grid-template-columns: 1fr;
+            }
+            
+            .popup-content {
+                width: 90%;
+                max-width: 400px;
+            }
+            
+            .prompts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 AI提示词管理插件 - UI原型设计</h1>
+
+        <!-- 快捷输入界面演示 -->
+        <div class="design-section">
+            <h2 class="section-title">1. 快捷输入界面（核心交互）</h2>
+            <div class="wireframe-note">
+                📝 当用户在AI聊天页面输入触发词（如 @@ 或 /prompt）时，弹出提示词选择器
+            </div>
+            
+            <div class="quick-input-demo">
+                <div class="chat-input-container">
+                    <div class="trigger-hint">输入 @@ 触发</div>
+                    <input type="text" class="chat-input" placeholder="请帮我写一份产品需求文档 @@" readonly>
+                </div>
+                
+                <!-- 弹窗界面 -->
+                <div class="popup-overlay" style="position: relative; background: rgba(0,0,0,0.1);">
+                    <div class="popup-content">
+                        <div class="popup-header">
+                            <div class="popup-title">🎯 选择提示词</div>
+                            <button class="close-btn">×</button>
+                        </div>
+                        
+                        <div class="search-bar">
+                            <input type="text" class="search-input" placeholder="搜索提示词...">
+                        </div>
+                        
+                        <div class="categories-tabs">
+                            <button class="category-tab active">全部</button>
+                            <button class="category-tab">编程</button>
+                            <button class="category-tab">写作</button>
+                            <button class="category-tab">翻译</button>
+                            <button class="category-tab">分析</button>
+                            <button class="category-tab">创意</button>
+                            <button class="category-tab">自定义</button>
+                        </div>
+                        
+                        <div class="prompts-list">
+                            <div class="prompt-item selected">
+                                <div class="prompt-title">📋 产品需求文档模板</div>
+                                <div class="prompt-description">帮助编写结构化的产品需求文档，包含背景、目标、功能等要素</div>
+                                <div class="prompt-tags">
+                                    <span class="tag">产品</span>
+                                    <span class="tag">文档</span>
+                                    <span class="tag">模板</span>
+                                </div>
+                            </div>
+                            
+                            <div class="prompt-item">
+                                <div class="prompt-title">🎨 UI设计评估</div>
+                                <div class="prompt-description">从用户体验角度评估界面设计，提供改进建议</div>
+                                <div class="prompt-tags">
+                                    <span class="tag">设计</span>
+                                    <span class="tag">UI/UX</span>
+                                </div>
+                            </div>
+                            
+                            <div class="prompt-item">
+                                <div class="prompt-title">📊 数据分析报告</div>
+                                <div class="prompt-description">生成专业的数据分析报告，包含图表建议和结论</div>
+                                <div class="prompt-tags">
+                                    <span class="tag">数据</span>
+                                    <span class="tag">分析</span>
+                                    <span class="tag">报告</span>
+                                </div>
+                            </div>
+                            
+                            <div class="prompt-item">
+                                <div class="prompt-title">💡 创意策划方案</div>
+                                <div class="prompt-description">协助制定创意活动策划方案，包含执行步骤</div>
+                                <div class="prompt-tags">
+                                    <span class="tag">创意</span>
+                                    <span class="tag">策划</span>
+                                    <span class="tag">营销</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="popup-footer">
+                            <div class="shortcut-hint">
+                                ⌨️ 快捷键：↑↓ 选择，Enter 确认，Esc 取消
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary">取消</button>
+                                <button class="btn btn-primary">插入提示词</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理界面 -->
+        <div class="design-section">
+            <h2 class="section-title">2. 提示词管理界面</h2>
+            <div class="wireframe-note">
+                📝 用户可以通过插件图标或右键菜单打开管理界面，进行提示词的增删改查
+            </div>
+            
+            <div class="management-interface">
+                <div class="sidebar">
+                    <ul class="sidebar-menu">
+                        <li><a href="#" class="active">📋 我的提示词</a></li>
+                        <li><a href="#">🏪 提示词库</a></li>
+                        <li><a href="#">📁 分类管理</a></li>
+                        <li><a href="#">⭐ 收藏夹</a></li>
+                        <li><a href="#">📊 使用统计</a></li>
+                        <li><a href="#">⚙️ 设置</a></li>
+                        <li><a href="#">📤 导入导出</a></li>
+                    </ul>
+                </div>
+                
+                <div class="main-content">
+                    <div class="content-header">
+                        <h3 class="content-title">我的提示词</h3>
+                        <button class="add-btn">+ 新增提示词</button>
+                    </div>
+                    
+                    <div class="prompts-grid">
+                        <div class="prompt-card">
+                            <div class="prompt-card-header">
+                                <div class="prompt-card-title">📋 产品需求文档模板</div>
+                                <div class="prompt-card-actions">
+                                    <button class="action-btn">✏️</button>
+                                    <button class="action-btn">🗑️</button>
+                                    <button class="action-btn">⭐</button>
+                                </div>
+                            </div>
+                            <div class="prompt-card-content">
+                                请帮我编写一份产品需求文档，包含以下结构：1. 项目背景与目标 2. 功能需求详述 3. 技术要求 4. 用户体验要求...
+                            </div>
+                            <div class="prompt-tags">
+                                <span class="tag">产品</span>
+                                <span class="tag">文档</span>
+                                <span class="tag">使用次数: 15</span>
+                            </div>
+                        </div>
+                        
+                        <div class="prompt-card">
+                            <div class="prompt-card-header">
+                                <div class="prompt-card-title">🎨 UI设计评估</div>
+                                <div class="prompt-card-actions">
+                                    <button class="action-btn">✏️</button>
+                                    <button class="action-btn">🗑️</button>
+                                    <button class="action-btn">⭐</button>
+                                </div>
+                            </div>
+                            <div class="prompt-card-content">
+                                作为UI/UX专家，请评估以下界面设计，从用户体验、视觉层次、交互逻辑等方面提供专业建议...
+                            </div>
+                            <div class="prompt-tags">
+                                <span class="tag">设计</span>
+                                <span class="tag">UI/UX</span>
+                                <span class="tag">使用次数: 8</span>
+                            </div>
+                        </div>
+                        
+                        <div class="prompt-card">
+                            <div class="prompt-card-header">
+                                <div class="prompt-card-title">💻 代码审查助手</div>
+                                <div class="prompt-card-actions">
+                                    <button class="action-btn">✏️</button>
+                                    <button class="action-btn">🗑️</button>
+                                    <button class="action-btn">⭐</button>
+                                </div>
+                            </div>
+                            <div class="prompt-card-content">
+                                请作为高级开发工程师，审查以下代码，从性能、安全性、可维护性、最佳实践等角度提供改进建议...
+                            </div>
+                            <div class="prompt-tags">
+                                <span class="tag">编程</span>
+                                <span class="tag">代码审查</span>
+                                <span class="tag">使用次数: 23</span>
+                            </div>
+                        </div>
+                        
+                        <div class="prompt-card">
+                            <div class="prompt-card-header">
+                                <div class="prompt-card-title">📈 数据分析报告</div>
+                                <div class="prompt-card-actions">
+                                    <button class="action-btn">✏️</button>
+                                    <button class="action-btn">🗑️</button>
+                                    <button class="action-btn">⭐</button>
+                                </div>
+                            </div>
+                            <div class="prompt-card-content">
+                                基于提供的数据，生成专业的分析报告，包含数据概览、趋势分析、关键洞察和建议...
+                            </div>
+                            <div class="prompt-tags">
+                                <span class="tag">数据分析</span>
+                                <span class="tag">报告</span>
+                                <span class="tag">使用次数: 12</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设计说明 -->
+        <div class="design-section">
+            <h2 class="section-title">3. 设计特点与亮点</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div style="background: #e8f5e8; padding: 16px; border-radius: 8px; border-left: 4px solid #27ae60;">
+                    <h4 style="color: #27ae60; margin-bottom: 8px;">🚀 快速启动</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">通过 @@ 或 /prompt 等触发词快速调用，无需离开当前聊天界面</p>
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 16px; border-radius: 8px; border-left: 4px solid #3498db;">
+                    <h4 style="color: #3498db; margin-bottom: 8px;">🎯 智能搜索</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">支持模糊搜索、分类筛选、标签过滤，快速找到所需提示词</p>
+                </div>
+                
+                <div style="background: #fff3e0; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12;">
+                    <h4 style="color: #f39c12; margin-bottom: 8px;">⌨️ 键盘友好</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">全键盘操作支持，提升专业用户使用效率</p>
+                </div>
+                
+                <div style="background: #f3e5f5; padding: 16px; border-radius: 8px; border-left: 4px solid #9b59b6;">
+                    <h4 style="color: #9b59b6; margin-bottom: 8px;">📱 响应式设计</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">适配桌面端和移动端，保证在不同设备上的使用体验</p>
+                </div>
+                
+                <div style="background: #ffeaa7; padding: 16px; border-radius: 8px; border-left: 4px solid #fdcb6e;">
+                    <h4 style="color: #e17055; margin-bottom: 8px;">🎨 视觉层次</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">清晰的信息架构，通过颜色、字体、间距建立视觉层次</p>
+                </div>
+                
+                <div style="background: #d1ecf1; padding: 16px; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                    <h4 style="color: #17a2b8; margin-bottom: 8px;">🔧 易于管理</h4>
+                    <p style="font-size: 14px; color: #2c3e50;">直观的管理界面，支持拖拽排序、批量操作等高级功能</p>
+                </div>
+         
