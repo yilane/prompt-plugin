@@ -13,7 +13,7 @@ import { computed } from 'vue'
 import type { ButtonVariant } from '../../types'
 
 defineOptions({
-  name: 'Button'
+  name: 'ActionButton'
 })
 
 interface ButtonProps {
@@ -40,7 +40,7 @@ const classes = computed(() => {
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-secondary',
     success: 'bg-success text-success-foreground hover:bg-success/90 focus:ring-success',
     danger: 'bg-danger text-danger-foreground hover:bg-danger/90 focus:ring-danger',
-    ghost: 'hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0',
+    ghost: 'border-none bg-transparent hover:bg-gray-200 dark:hover:bg-gray-700 focus:ring-0 focus:ring-offset-0',
     link: 'text-primary underline-offset-4 hover:underline focus:ring-primary'
   }
 

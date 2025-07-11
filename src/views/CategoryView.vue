@@ -6,6 +6,7 @@ import Modal from '../components/ui/Modal.vue'
 import Input from '../components/ui/Input.vue'
 import Button from '../components/ui/Button.vue'
 import draggable from 'vuedraggable'
+import IconPicker from '../components/ui/IconPicker.vue'
 
 const categories = ref<Category[]>([])
 const prompts = ref<Prompt[]>([])
@@ -158,7 +159,7 @@ const onDragEnd = async () => {
         <h3 class="text-lg font-semibold mb-4">{{ modalTitle }}</h3>
         <div class="space-y-4">
           <Input v-model="form.name" label="分类名称" placeholder="例如：编程技巧" />
-          <Input v-model="form.icon" label="分类图标" placeholder="例如：💻" />
+          <IconPicker v-model="form.icon" />
           <Input v-model="form.description" label="分类描述" placeholder="关于这个分类的简短描述" />
         </div>
         <div class="flex justify-end gap-3 pt-5 mt-5 border-t border-light-border dark:border-dark-border">

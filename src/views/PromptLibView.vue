@@ -1,26 +1,83 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { storage } from '../utils/storage';
 import { presetPrompts, presetCategories } from '../utils/presets';
 import type { Prompt, Category } from '../types';
 import Button from '../components/ui/Button.vue';
+import CategorySelector from '../components/business/CategorySelector.vue';
+import SearchBox from '../components/ui/SearchBox.vue';
 import Tag from '../components/ui/Tag.vue';
-import CategorySelector from '../components/business/CategorySelector.vue'
 
 const statusMap = ref<Record<string, 'added' | 'adding'>>({});
-const selectedCategoryId = ref('all')
+const selectedCategoryId = ref('all');
+const searchQuery = ref('');
+const copiedMap = ref<Record<string, boolean>>({});
+const userCategories = ref<Category[]>([]);
+
+onMounted(async () => {
+  const [userPrompts, loadedUserCategories] = await Promise.all([
+    storage.getAllPrompts(),
+    storage.getAllCategories()
+  ]);
+  userCategories.value = loadedUserCategories;
+
+  const userPromptTitles = new Set(userPrompts.map(p => p.title));
+  presetPrompts.forEach(preset => {
+    if (userPromptTitles.has(preset.title)) {
+      statusMap.value[preset.title] = 'added';
+    }
+  });
+});
 
 const allCategories = computed<Category[]>(() => {
   const allCategory: Category = { id: 'all', name: '全部', description: '', icon: '📚', sort: -1, isCustom: false }
   return [allCategory, ...presetCategories.sort((a, b) => a.sort - b.sort)];
 });
 
-const filteredPrompts = computed(() => {
-  if (selectedCategoryId.value === 'all') {
-    return presetPrompts;
-  }
-  return presetPrompts.filter(p => p.category === selectedCategoryId.value);
+const promptsWithCategoryDetails = computed(() => {
+  const categoryMap = new Map(presetCategories.map(c => [c.id, c]));
+  return presetPrompts.map(p => {
+    return {
+      ...p,
+      categoryDetails: categoryMap.get(p.category)
+    }
+  });
 });
+
+const filteredPrompts = computed(() => {
+  let promptsToFilter = promptsWithCategoryDetails.value;
+
+  // 1. Filter by category
+  if (selectedCategoryId.value !== 'all') {
+    promptsToFilter = promptsToFilter.filter(p => p.category === selectedCategoryId.value);
+  }
+
+  // 2. Filter by search query
+  if (searchQuery.value) {
+    const lowerCaseQuery = searchQuery.value.toLowerCase();
+    promptsToFilter = promptsToFilter.filter(prompt => {
+      const inTitle = prompt.title.toLowerCase().includes(lowerCaseQuery);
+      const inContent = prompt.content.toLowerCase().includes(lowerCaseQuery);
+      const inTags = prompt.tags.some(tag => tag.toLowerCase().includes(lowerCaseQuery));
+      return inTitle || inContent || inTags;
+    });
+  }
+
+  return promptsToFilter;
+});
+
+async function copyToClipboard(content: string, id: string) {
+  if (copiedMap.value[id]) return;
+  try {
+    await navigator.clipboard.writeText(content);
+    copiedMap.value[id] = true;
+    setTimeout(() => {
+      copiedMap.value[id] = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy: ', err);
+  }
+}
 
 const handleAddPrompt = async (preset: Prompt) => {
   const title = preset.title;
@@ -29,6 +86,18 @@ const handleAddPrompt = async (preset: Prompt) => {
   statusMap.value[title] = 'adding';
 
   try {
+    // Sync category logic
+    if (preset.category) {
+      const categoryExists = userCategories.value.some(c => c.id === preset.category);
+      if (!categoryExists) {
+        const categoryToSave = presetCategories.find(c => c.id === preset.category);
+        if (categoryToSave) {
+          await storage.saveCategory(categoryToSave);
+          userCategories.value.push(categoryToSave); // Update local state
+        }
+      }
+    }
+
     const newPrompt: Prompt = {
       ...preset,
       id: `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -52,7 +121,8 @@ const handleAddPrompt = async (preset: Prompt) => {
       <p class="text-sm text-text-muted dark:text-dark-text-muted mt-1">这里是一些高质量的预设提示词，您可以将它们添加到您的个人库中。</p>
     </div>
 
-    <div class="mb-5">
+    <div class="space-y-5 mb-5">
+      <SearchBox v-model="searchQuery" placeholder="搜索标题、内容或标签..." />
       <CategorySelector
         :categories="allCategories"
         v-model:selectedCategoryId="selectedCategoryId"
@@ -63,11 +133,25 @@ const handleAddPrompt = async (preset: Prompt) => {
       <div
         v-for="prompt in filteredPrompts"
         :key="prompt.id"
-        class="bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border rounded-lg p-6 flex flex-col"
+        class="bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border rounded-lg p-6 flex flex-col h-full"
       >
-        <h4 class="text-base font-semibold text-text-main dark:text-dark-text-main mb-2">{{ prompt.title }}</h4>
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="text-base font-semibold text-text-main dark:text-dark-text-main flex-1 pr-2">{{ prompt.title }}</h4>
+          <div class="flex items-center">
+            <Button variant="ghost" size="xs" @click.stop="copyToClipboard(prompt.content, prompt.id)" title="复制">
+              <svg v-if="copiedMap[prompt.id]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-green-500"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-gray-500 dark:text-gray-400"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </Button>
+          </div>
+        </div>
         <p class="text-sm text-text-content dark:text-dark-text-content mb-4 flex-grow">{{ prompt.content }}</p>
-        <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex flex-wrap items-center gap-2 mb-6">
+          <Tag
+            v-if="prompt.categoryDetails"
+            :content="prompt.categoryDetails.name"
+            size="sm"
+            class="!bg-blue-100 !text-blue-800 dark:!bg-blue-900 dark:!text-blue-200"
+          />
           <Tag v-for="tag in prompt.tags" :key="tag" :content="tag" size="sm" />
         </div>
         <div class="mt-auto">
