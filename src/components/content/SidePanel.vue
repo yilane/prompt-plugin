@@ -87,11 +87,14 @@ onMounted(() => {
   <!-- 左侧面板 -->
   <div :style="{
          height: '100vh',
-         width: '400px',
+         width: '380px',
+         minWidth: '320px',
+         maxWidth: '450px',
          backgroundColor: '#ffffff',
          display: 'flex',
          flexDirection: 'column',
          fontFamily: 'system-ui, -apple-system, sans-serif',
+         boxSizing: 'border-box'
        }">
       <!-- 头部 -->
       <div :style="{
@@ -140,8 +143,8 @@ onMounted(() => {
               justifyContent: 'center',
               transition: 'background-color 0.2s'
             }"
-            @mouseover="e => e.currentTarget.style.backgroundColor = '#f3f4f6'"
-            @mouseout="e => e.currentTarget.style.backgroundColor = 'transparent'"
+            @mouseover="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.backgroundColor = '#f3f4f6'"
+            @mouseout="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
               <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
@@ -162,8 +165,8 @@ onMounted(() => {
               justifyContent: 'center',
               transition: 'background-color 0.2s'
             }"
-            @mouseover="e => e.currentTarget.style.backgroundColor = '#f3f4f6'"
-            @mouseout="e => e.currentTarget.style.backgroundColor = 'transparent'"
+            @mouseover="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.backgroundColor = '#f3f4f6'"
+            @mouseout="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
               <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311a1.464 1.464 0 0 1-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l-.34-.1c-1.4-.413-1.4-2.397 0-2.81l.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.858 2.929 2.929 0 0 1 0 5.858z"/>
@@ -253,13 +256,13 @@ onMounted(() => {
               transition: 'all 0.2s',
               position: 'relative'
             }"
-            @mouseover="e => {
-              e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.borderColor = '#3b82f6';
+            @mouseover="(e: MouseEvent) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+              (e.currentTarget as HTMLElement).style.borderColor = '#3b82f6';
             }"
-            @mouseout="e => {
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.borderColor = '#e5e7eb';
+            @mouseout="(e: MouseEvent) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+              (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb';
             }"
           >
             <div :style="{ padding: '16px' }">
@@ -288,8 +291,8 @@ onMounted(() => {
                     flexShrink: '0',
                     transition: 'all 0.2s'
                   }"
-                  @mouseover="e => !copiedMap[prompt.id] && (e.currentTarget.style.backgroundColor = '#f3f4f6')"
-                  @mouseout="e => e.currentTarget.style.backgroundColor = 'transparent'"
+                  @mouseover="(e: MouseEvent) => !copiedMap[prompt.id] && ((e.currentTarget as HTMLElement).style.backgroundColor = '#f3f4f6')"
+                  @mouseout="(e: MouseEvent) => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
                 >
                   <svg v-if="copiedMap[prompt.id]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
