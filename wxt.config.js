@@ -34,6 +34,18 @@ export default defineConfig({
     ],
     action: {
       default_title: 'AI提示词管理',
+      default_icon: {
+        '16': 'icons/16_16.png',
+        '36': 'icons/36_36.png',
+        '48': 'icons/48_48.png',
+        '128': 'icons/128_128.png',
+      },
+    },
+    icons: {
+      '16': 'icons/16_16.png',
+      '36': 'icons/36_36.png',
+      '48': 'icons/48_48.png',
+      '128': 'icons/128_128.png',
     },
     commands: {
       'wxt:reload-extension': {

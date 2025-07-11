@@ -110,15 +110,21 @@ onMounted(() => {
           <div :style="{
             width: '32px',
             height: '32px',
-            backgroundColor: '#3b82f6',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            overflow: 'hidden'
           }">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <img
+              src="/icons/36_36.png"
+              alt="AI Prompts Logo"
+              :style="{
+                width: '32px',
+                height: '32px',
+                objectFit: 'contain'
+              }"
+            />
           </div>
           <h2 :style="{
             fontSize: '18px',
