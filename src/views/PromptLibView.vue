@@ -86,14 +86,21 @@ const handleAddPrompt = async (preset: Prompt) => {
   statusMap.value[title] = 'adding';
 
   try {
+    let finalCategoryId = preset.category;
+
     // Sync category logic
     if (preset.category) {
-      const categoryExists = userCategories.value.some(c => c.id === preset.category);
-      if (!categoryExists) {
-        const categoryToSave = presetCategories.find(c => c.id === preset.category);
-        if (categoryToSave) {
-          await storage.saveCategory(categoryToSave);
-          userCategories.value.push(categoryToSave); // Update local state
+      const categoryToSave = presetCategories.find(c => c.id === preset.category);
+      if (categoryToSave) {
+        const savedCategory = await storage.addCategory(categoryToSave);
+        finalCategoryId = savedCategory.id; // Use the authoritative ID
+
+        const localCategoryIndex = userCategories.value.findIndex(c => c.name === savedCategory.name);
+
+        if (localCategoryIndex !== -1) {
+          userCategories.value[localCategoryIndex] = savedCategory;
+        } else {
+          userCategories.value.push(savedCategory);
         }
       }
     }
@@ -101,6 +108,7 @@ const handleAddPrompt = async (preset: Prompt) => {
     const newPrompt: Prompt = {
       ...preset,
       id: `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      category: finalCategoryId,
       createTime: new Date().toISOString(),
       updateTime: new Date().toISOString(),
       isCustom: true, // When user adds it, it becomes a "custom" prompt in their list

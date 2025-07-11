@@ -5,7 +5,8 @@ const STORAGE_KEYS = {
   PROMPTS: 'ai-prompts-prompts',
   CATEGORIES: 'ai-prompts-categories',
   SETTINGS: 'ai-prompts-settings',
-  USAGE_STATS: 'ai-prompts-usage-stats'
+  USAGE_STATS: 'ai-prompts-usage-stats',
+  IS_INITIALIZED: 'ai-prompts-is-initialized'
 } as const
 
 export class StorageManager {
@@ -16,9 +17,12 @@ export class StorageManager {
   }
 
   // 通用的存储操作方法
-  private async getFromStorage<T>(key: string): Promise<T | undefined> {
+  public async getFromStorage<T>(key: string): Promise<T | undefined> {
     const result = await browser.storage.local.get(key)
-    return result[key]
+    if (result && typeof result === 'object' && key in result) {
+      return result[key] as T;
+    }
+    return undefined;
   }
 
   private async setToStorage<T>(key: string, value: T): Promise<void> {
@@ -72,14 +76,19 @@ export class StorageManager {
   }
 
   async addCategory(category: Omit<Category, 'id'>): Promise<Category> {
-    const id = this.generateId();
-    const newCategory = { ...category, id };
-
     const categories = await this.getAllCategories()
+    const existingCategory = categories.find(c => c.name === category.name)
+    if (existingCategory) {
+      return existingCategory
+    }
+
+    const id = this.generateId()
+    const newCategory = { ...category, id }
+
     categories.push(newCategory)
     await this.setToStorage(STORAGE_KEYS.CATEGORIES, categories)
 
-    return newCategory;
+    return newCategory
   }
 
   async updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
@@ -88,7 +97,7 @@ export class StorageManager {
 
     if (index === -1) throw new Error(`Category with id ${id} not found`)
 
-    const updatedCategory = { ...categories[index], ...updates }
+    const updatedCategory = { ...categories[index], ...updates } as Category;
     categories[index] = updatedCategory
     await this.setToStorage(STORAGE_KEYS.CATEGORIES, categories)
 
@@ -123,75 +132,16 @@ export class StorageManager {
     const settings = await this.getFromStorage<Settings>(STORAGE_KEYS.SETTINGS)
     const defaultSettings = this.getDefaultSettings();
 
-    console.log('AI-Prompts: Raw settings from Chrome Storage:', settings)
-    console.log('AI-Prompts: Default settings:', defaultSettings)
+    // Smart merge for settings. User settings take precedence.
+    const finalSettings = { ...defaultSettings, ...settings };
 
-    // 如果没有设置，初始化用户自定义设置
-    if (!settings) {
-      console.log('AI-Prompts: No settings found in storage, initializing with custom settings')
-      const initialSettings: Settings = {
-        theme: 'system',
-        language: 'zh',
-        triggerSequences: [
-          { id: 'default-1', value: '@@', enabled: true }
-        ],
-        enableQuickInsert: true,
-        enableKeyboardShortcuts: true,
-        enableNotifications: true,
-        autoBackup: false,
-        maxRecentPrompts: 10
-      }
-
-      // 立即保存初始设置
-      await this.saveSettings(initialSettings)
-      console.log('AI-Prompts: Initial settings saved:', initialSettings)
-
-      // 清除旧的提示词数据，并设置为空列表
-      await this.setToStorage(STORAGE_KEYS.PROMPTS, [])
-      console.log('AI-Prompts: Initialized prompts list to empty.')
-
-      // 初始化示例分类
-      await this.initializeSampleCategories()
-
-      return initialSettings
-    }
-
-    // 向上兼容：处理旧数据结构迁移
+    // Backward compatibility for old triggerKey setting
     if (settings && (settings as any).triggerKey && !settings.triggerSequences) {
-        settings.triggerSequences = [{ id: 'default-1', value: (settings as any).triggerKey, enabled: true }];
-        delete (settings as any).triggerKey;
-        // 立即保存迁移后的设置
-        await this.saveSettings(settings);
+      finalSettings.triggerSequences = [{ id: 'default-1', value: (settings as any).triggerKey as string, enabled: true }];
+      delete (finalSettings as any).triggerKey;
     }
 
-    // 智能合并设置
-    const finalSettings = { ...defaultSettings, ...settings }
-
-    // 检查是否需要重新初始化示例数据
-    const existingCategories = await this.getAllCategories()
-
-    if (existingCategories.length === 0) {
-      console.log('AI-Prompts: No categories found, initializing sample categories')
-      await this.initializeSampleCategories()
-    }
-
-    // 详细调试用户设置
-    console.log('AI-Prompts: Settings object exists:', !!settings)
-    console.log('AI-Prompts: Settings has triggerSequences:', !!(settings && settings.triggerSequences))
-    console.log('AI-Prompts: Settings triggerSequences length:', settings && settings.triggerSequences ? settings.triggerSequences.length : 0)
-    console.log('AI-Prompts: Settings triggerSequences content:', settings && settings.triggerSequences ? settings.triggerSequences : 'undefined')
-
-    // 特殊处理：如果用户有自定义的triggerSequences，优先使用用户的
-    if (settings && settings.triggerSequences && settings.triggerSequences.length > 0) {
-      console.log('AI-Prompts: Using user custom triggerSequences')
-      finalSettings.triggerSequences = settings.triggerSequences
-    } else {
-      console.log('AI-Prompts: Using default triggerSequences')
-    }
-
-    console.log('AI-Prompts: Final merged settings:', finalSettings)
-    console.log('AI-Prompts: Final triggerSequences:', finalSettings.triggerSequences)
-    return finalSettings
+    return finalSettings;
   }
 
   async saveSettings(settings: Settings): Promise<void> {
@@ -238,6 +188,25 @@ export class StorageManager {
     await this.setToStorage(STORAGE_KEYS.USAGE_STATS, allStats)
   }
 
+  // Private method for one-time data initialization
+  private async _initializeDataForFirstRun(): Promise<void> {
+    console.log('AI-Prompts: First run detected. Initializing database...');
+
+    const initialSettings: Settings = this.getDefaultSettings();
+    await this.saveSettings(initialSettings);
+    console.log('AI-Prompts: Initial settings saved.');
+
+    await this.setToStorage(STORAGE_KEYS.PROMPTS, []);
+    console.log('AI-Prompts: Prompts list initialized.');
+
+    await this.initializeSampleCategories();
+    console.log('AI-Prompts: Sample categories initialized.');
+
+    // Set the flag to prevent this from running again
+    await this.setToStorage(STORAGE_KEYS.IS_INITIALIZED, true);
+    console.log('AI-Prompts: Database initialization complete.');
+  }
+
   // 数据导入导出
   async exportData(): Promise<string> {
     const [prompts, categories, settings] = await Promise.all([
@@ -254,19 +223,64 @@ export class StorageManager {
   }
 
   async importData(jsonData: string): Promise<void> {
-    const data = JSON.parse(jsonData)
+    const importObject = JSON.parse(jsonData)
+    const {
+      prompts: importedPrompts = [],
+      categories: importedCategories = [],
+      settings: importedSettings = {},
+    } = importObject.data || {}
 
-    if (data.data.prompts) {
-      await this.setToStorage(STORAGE_KEYS.PROMPTS, data.data.prompts)
-    }
+    // 1. Get existing data
+    const existingPrompts = await this.getAllPrompts()
+    const existingCategories = await this.getAllCategories()
+    const existingSettings = await this.getSettings()
 
-    if (data.data.categories) {
-      await this.setToStorage(STORAGE_KEYS.CATEGORIES, data.data.categories)
-    }
+    // 2. Merge Categories
+    const categoryMap = new Map<string, Category>()
+    existingCategories.forEach(cat => categoryMap.set(cat.name, cat))
 
-    if (data.data.settings) {
-      await this.saveSettings(data.data.settings)
-    }
+    const oldIdToNewCategoryMap = new Map<string, Category>()
+
+    importedCategories.forEach((importedCat: Category) => {
+      const existingCat = categoryMap.get(importedCat.name)
+      if (existingCat) {
+        oldIdToNewCategoryMap.set(importedCat.id, existingCat)
+      } else {
+        const newCat = { ...importedCat, id: this.generateId() }
+        categoryMap.set(newCat.name, newCat)
+        oldIdToNewCategoryMap.set(importedCat.id, newCat)
+      }
+    })
+
+    const mergedCategories = Array.from(categoryMap.values())
+    await this.setToStorage(STORAGE_KEYS.CATEGORIES, mergedCategories)
+
+    // 3. Merge Prompts
+    const promptTitleSet = new Set(existingPrompts.map(p => p.title))
+    const promptsToAdd: Prompt[] = []
+
+    importedPrompts.forEach((importedPrompt: Prompt) => {
+      if (!promptTitleSet.has(importedPrompt.title)) {
+        const targetCategory = oldIdToNewCategoryMap.get(importedPrompt.category)
+
+        if (targetCategory) {
+          const newPrompt = {
+            ...importedPrompt,
+            id: this.generateId(),
+            category: targetCategory.id,
+          }
+          promptsToAdd.push(newPrompt)
+          promptTitleSet.add(newPrompt.title)
+        }
+      }
+    })
+
+    const mergedPrompts = [...existingPrompts, ...promptsToAdd]
+    await this.setToStorage(STORAGE_KEYS.PROMPTS, mergedPrompts)
+
+    // 4. Merge Settings
+    const finalSettings = { ...existingSettings, ...importedSettings }
+    await this.saveSettings(finalSettings)
   }
 
   // 清空所有数据
@@ -291,9 +305,8 @@ export class StorageManager {
 
   // 初始化示例分类
   private async initializeSampleCategories(): Promise<void> {
-    const sampleCategories: Category[] = [
+    const sampleCategories: Omit<Category, 'id'>[] = [
       {
-        id: this.generateId(),
         name: '编程',
         description: '编程相关的提示词',
         icon: '💻',
@@ -301,7 +314,6 @@ export class StorageManager {
         isCustom: false
       },
       {
-        id: this.generateId(),
         name: '写作',
         description: '写作相关的提示词',
         icon: '✍️',
@@ -309,7 +321,6 @@ export class StorageManager {
         isCustom: false
       },
       {
-        id: this.generateId(),
         name: '翻译',
         description: '翻译相关的提示词',
         icon: '🌐',
@@ -317,7 +328,6 @@ export class StorageManager {
         isCustom: false
       },
       {
-        id: this.generateId(),
         name: '分析',
         description: '数据分析相关的提示词',
         icon: '📊',
@@ -325,7 +335,6 @@ export class StorageManager {
         isCustom: false
       },
       {
-        id: this.generateId(),
         name: '创意',
         description: '创意策划相关的提示词',
         icon: '🎨',
@@ -333,7 +342,6 @@ export class StorageManager {
         isCustom: false
       },
       {
-        id: this.generateId(),
         name: '产品',
         description: '产品管理相关的提示词',
         icon: '📋',
@@ -344,17 +352,24 @@ export class StorageManager {
 
     // 保存示例分类
     for (const category of sampleCategories) {
-      await this.saveCategory(category)
+      await this.addCategory(category)
     }
 
     console.log('AI-Prompts: Sample categories initialized:', sampleCategories.length)
   }
 }
 
-// 导出单例实例
-export const storage = new StorageManager()
+const storage = new StorageManager()
 
-// 初始化数据库的便捷函数
 export async function initializeDatabase(): Promise<void> {
-  await storage.init()
+  const isInitialized = await storage.getFromStorage<boolean>(STORAGE_KEYS.IS_INITIALIZED);
+  if (isInitialized) {
+    console.log('AI-Prompts: Database already initialized. Skipping setup.');
+    return;
+  }
+  // This will only run once on the very first installation.
+  // Accessing a private method this way is a workaround for TS.
+  await (storage as any)._initializeDataForFirstRun();
 }
+
+export { storage }
