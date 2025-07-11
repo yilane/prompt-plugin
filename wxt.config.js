@@ -47,6 +47,9 @@ export default defineConfig({
       '48': 'icons/48_48.png',
       '128': 'icons/128_128.png',
     },
+    side_panel: {
+      default_path: '/sidepanel.html'
+    },
     commands: {
       'wxt:reload-extension': {
         description: 'Reload the extension during development',

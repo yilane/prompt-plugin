@@ -2,14 +2,17 @@ import { defineBackground } from 'wxt/utils/define-background';
 import { browser } from 'wxt/browser';
 import { initializeDatabase } from '../src/utils/storage';
 
-console.log('AI-Prompts: Background script loaded. Initializing database...');
-initializeDatabase().then(() => {
-  console.log('AI-Prompts: Database initialized successfully.');
-}).catch((error) => {
-  console.error('AI-Prompts: Database initialization failed:', error);
-});
-
 export default defineBackground(() => {
+  console.log('AI-Prompts: Background script executing.');
+
+  // Move database initialization inside the background definition
+  // to ensure the service worker is ready.
+  initializeDatabase().then(() => {
+    console.log('AI-Prompts: Database initialized successfully from background.');
+  }).catch((error) => {
+    console.error('AI-Prompts: Database initialization failed from background:', error);
+  });
+
   browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
   browser.action.onClicked.addListener(async (tab) => {

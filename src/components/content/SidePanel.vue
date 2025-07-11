@@ -87,9 +87,8 @@ onMounted(() => {
   <!-- 左侧面板 -->
   <div :style="{
          height: '100vh',
-         width: '380px',
-         minWidth: '320px',
-         maxWidth: '450px',
+         width: '100%',
+         minWidth: '300px',
          backgroundColor: '#ffffff',
          display: 'flex',
          flexDirection: 'column',
