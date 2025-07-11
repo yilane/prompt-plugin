@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { storage } from '../utils/storage'
-import type { Category } from '../types'
+import type { Category, Prompt } from '../types'
 import Modal from '../components/ui/Modal.vue'
 import Input from '../components/ui/Input.vue'
 import Button from '../components/ui/Button.vue'
 import draggable from 'vuedraggable'
 
 const categories = ref<Category[]>([])
+const prompts = ref<Prompt[]>([])
 const isLoading = ref(true)
 const isModalOpen = ref(false)
 const editingCategory = ref<Category | null>(null)
@@ -15,13 +16,27 @@ const form = ref({ name: '', description: '', icon: '' })
 
 const modalTitle = computed(() => editingCategory.value ? '编辑分类' : '新增分类')
 
+const categoryPromptCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const prompt of prompts.value) {
+    if (prompt.category) {
+      counts.set(prompt.category, (counts.get(prompt.category) || 0) + 1)
+    }
+  }
+  return counts
+})
+
 onMounted(async () => {
   try {
     isLoading.value = true
-    const loadedCategories = await storage.getAllCategories()
+    const [loadedCategories, loadedPrompts] = await Promise.all([
+      storage.getAllCategories(),
+      storage.getAllPrompts()
+    ])
     categories.value = loadedCategories.sort((a, b) => a.sort - b.sort)
+    prompts.value = loadedPrompts
   } catch (error) {
-    console.error('Failed to load categories:', error)
+    console.error('Failed to load data:', error)
   } finally {
     isLoading.value = false
   }
@@ -121,7 +136,12 @@ const onDragEnd = async () => {
             </div>
             <span class="text-2xl">{{ category.icon }}</span>
             <div>
-              <div class="font-semibold text-text-main dark:text-dark-text-main">{{ category.name }}</div>
+              <div class="font-semibold text-text-main dark:text-dark-text-main flex items-center gap-2">
+                <span>{{ category.name }}</span>
+                <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5">
+                  {{ categoryPromptCounts.get(category.id) || 0 }}
+                </span>
+              </div>
               <div class="text-sm text-text-muted dark:text-dark-text-muted">{{ category.description }}</div>
             </div>
           </div>

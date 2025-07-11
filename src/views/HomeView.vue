@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted, computed, toRaw } from 'vue'
 import { storage } from '../utils/storage'
 import type { Prompt, Category } from '../types'
-import eventBus from '../utils/eventBus'
 import PromptCard from '../components/business/PromptCard.vue'
 import Modal from '../components/ui/Modal.vue'
 import PromptEditor from '../components/business/PromptEditor.vue'
@@ -18,6 +17,7 @@ const isModalOpen = ref(false)
 const editingPrompt = ref<Prompt | null>(null)
 const searchQuery = ref('')
 const selectedCategoryId = ref('all')
+const gridKey = ref(0)
 
 const promptsWithCategoryDetails = computed(() => {
   const categoryMap = new Map(categories.value.map(c => [c.id, c]))
@@ -59,19 +59,11 @@ const pageProvider = async (pageNumber: number, pageSize: number) => {
   return toRaw(filteredPrompts.value).slice(start, end)
 }
 
-const handleFavoriteUpdate = ({ id, isFavorite }: { id: string, isFavorite: boolean }) => {
-  prompts.value = prompts.value.map(p => {
-    if (p.id === id) {
-      return { ...p, isFavorite };
-    }
-    return p;
-  });
-};
-
 onMounted(async () => {
   try {
     isLoading.value = true
     await storage.init()
+    await storage.getSettings() // Ensures data is initialized
 
     // Load prompts and categories in parallel
     const [loadedPrompts, loadedCategories] = await Promise.all([
@@ -84,23 +76,15 @@ onMounted(async () => {
       { id: 'all', name: '全部', description: '', icon: '📚', sort: -1, isCustom: false },
       ...loadedCategories.sort((a, b) => a.sort - b.sort)
     ];
-
-    // Dummy data check (can be removed in production)
-    if (prompts.value.length === 0) {
-      const dummyPrompt: Prompt = { id: '1', title: '产品需求文档模板', content: '请帮我编写一份产品需求文档...', description: '一个用于快速生成PRD的模板', category: '文档', tags: ['产品', '文档', '模板'], isCustom: false, createTime: new Date().toISOString(), updateTime: new Date().toISOString(), useCount: 15, rating: 5 };
-      await storage.savePrompt(dummyPrompt);
-      prompts.value.push(dummyPrompt);
-    }
   } catch (error) {
     console.error('Failed to load initial data:', error)
   } finally {
     isLoading.value = false
   }
-  eventBus.on('favorite:toggle', handleFavoriteUpdate)
 })
 
 onUnmounted(() => {
-  eventBus.off('favorite:toggle', handleFavoriteUpdate);
+  // eventBus.off('favorite:toggle', handleFavoriteUpdate); // This line is removed
 });
 
 const openAddModal = () => {
@@ -134,7 +118,6 @@ const handleSavePrompt = async (promptData: Partial<Prompt>) => {
         createTime: new Date().toISOString(),
         updateTime: new Date().toISOString(),
         useCount: 0,
-        rating: 0,
         ...promptData
       } as Prompt
       await storage.savePrompt(newPrompt)
@@ -144,6 +127,7 @@ const handleSavePrompt = async (promptData: Partial<Prompt>) => {
     console.error('Failed to save prompt:', error)
   } finally {
     closeModal()
+    gridKey.value++ // Force grid re-render
   }
 }
 
@@ -152,34 +136,10 @@ const handleDeletePrompt = async (promptId: string) => {
     try {
       await storage.deletePrompt(promptId)
       prompts.value = prompts.value.filter(p => p.id !== promptId)
+      gridKey.value++ // Force grid re-render
     } catch (error) {
       console.error('Failed to delete prompt:', error)
     }
-  }
-}
-
-const handleToggleFavorite = async (prompt: Prompt) => {
-  const newIsFavorite = !prompt.isFavorite;
-
-  // Step 1: Immediately update the local state for instant UI feedback.
-  prompts.value = prompts.value.map(p =>
-    p.id === prompt.id ? { ...p, isFavorite: newIsFavorite } : p
-  );
-
-  try {
-    // Step 2 & 3: Persist the change and then notify other components.
-    const rawPrompt = toRaw(prompt);
-    const updatedPromptForStorage = { ...rawPrompt, isFavorite: newIsFavorite };
-
-    await storage.savePrompt(updatedPromptForStorage);
-    eventBus.emit('favorite:toggle', { id: updatedPromptForStorage.id, isFavorite: updatedPromptForStorage.isFavorite });
-
-  } catch (error) {
-    console.error('Failed to update favorite status:', error);
-    // On error, revert the UI change to maintain consistency.
-    prompts.value = prompts.value.map(p =>
-      p.id === prompt.id ? { ...p, isFavorite: !newIsFavorite } : p
-    );
   }
 }
 </script>
@@ -210,7 +170,7 @@ const handleToggleFavorite = async (prompt: Prompt) => {
     </div>
     <Grid
       v-else-if="filteredPrompts.length > 0"
-      :key="`${selectedCategoryId}-${searchQuery}`"
+      :key="`${selectedCategoryId}-${searchQuery}-${gridKey}`"
       class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4"
       :length="filteredPrompts.length"
       :page-size="20"
@@ -222,7 +182,6 @@ const handleToggleFavorite = async (prompt: Prompt) => {
             :prompt="item"
             @edit="openEditModal"
             @delete="handleDeletePrompt"
-            @toggle-favorite="handleToggleFavorite"
           />
         </div>
       </template>

@@ -34,13 +34,13 @@ const emit = defineEmits(['click'])
 
 const classes = computed(() => {
   const base = 'inline-flex items-center justify-center rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-  
+
   const variantClasses = {
     primary: 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary',
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:ring-secondary',
     success: 'bg-success text-success-foreground hover:bg-success/90 focus:ring-success',
     danger: 'bg-danger text-danger-foreground hover:bg-danger/90 focus:ring-danger',
-    ghost: 'hover:bg-accent hover:text-accent-foreground focus:ring-accent',
+    ghost: 'hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0',
     link: 'text-primary underline-offset-4 hover:underline focus:ring-primary'
   }
 
@@ -66,4 +66,4 @@ function handleClick(event: MouseEvent) {
     emit('click', event)
   }
 }
-</script> 
+</script>

@@ -10,8 +10,6 @@ export interface Prompt {
   createTime: string
   updateTime: string
   useCount: number
-  rating: number
-  isFavorite?: boolean
   categoryDetails?: Category
 }
 
@@ -58,9 +56,8 @@ export interface SearchFilters {
   keyword: string
   category?: string
   tags?: string[]
-  onlyFavorites?: boolean
   onlyCustom?: boolean
-  sortBy: 'createTime' | 'updateTime' | 'useCount' | 'rating' | 'title'
+  sortBy: 'createTime' | 'updateTime' | 'useCount' | 'title'
   sortOrder: 'asc' | 'desc'
 }
 

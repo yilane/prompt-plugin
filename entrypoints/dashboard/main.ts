@@ -15,8 +15,8 @@ await initializeDatabase()
 // 2. 运行一次性数据迁移脚本
 await runCategoryMigration(storage)
 
-// 3. 初始化默认数据
-await initDefaultData(storage)
+// 3. 初始化默认数据 - 禁用，以使用 storage.ts 中的统一初始化逻辑
+// await initDefaultData(storage)
 
 // 4. 在所有异步操作完成后，安全地创建和挂载 Vue 应用
 const app = createApp(App)

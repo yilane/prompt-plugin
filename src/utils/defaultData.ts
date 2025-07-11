@@ -1,5 +1,5 @@
 import type { StorageManager } from './storage';
-import { presetCategories, presetPrompts } from './presets';
+import { presetCategories } from './presets';
 
 /**
  * Idempotent function to initialize default data.
@@ -17,16 +17,6 @@ export async function initDefaultData(storage: StorageManager) {
     if (categoriesToAdd.length > 0) {
       console.log(`Adding ${categoriesToAdd.length} missing preset categories...`)
       await Promise.all(categoriesToAdd.map(cat => storage.saveCategory(cat)))
-    }
-
-    // --- Initialize Prompts ---
-    const existingPrompts = await storage.getAllPrompts()
-    const existingPromptIds = new Set(existingPrompts.map(p => p.id))
-    const promptsToAdd = presetPrompts.filter(pp => !existingPromptIds.has(pp.id))
-
-    if (promptsToAdd.length > 0) {
-      console.log(`Adding ${promptsToAdd.length} missing preset prompts...`)
-      await Promise.all(promptsToAdd.map(p => storage.savePrompt(p)))
     }
 
   } catch (error) {

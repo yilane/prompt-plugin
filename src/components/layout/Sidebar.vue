@@ -36,7 +36,6 @@ const menuItems = [
   { to: '/', icon: '📋', text: '我的提示词' },
   { to: '/categories', icon: '📁', text: '分类管理' },
   { to: '/prompt-lib', icon: '🏪', text: '提示词库' },
-  { to: '/favorites', icon: '⭐', text: '收藏夹' },
   { to: '/stats', icon: '📊', text: '使用统计' },
   { to: '/settings', icon: '⚙️', text: '设置' },
   { to: '/import-export', icon: '📤', text: '导入导出' },

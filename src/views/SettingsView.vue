@@ -41,10 +41,33 @@ onMounted(async () => {
 const handleSave = async () => {
   if (!settingsForm.value) return;
   try {
+    console.log('AI-Prompts: About to save settings:', JSON.stringify(settingsForm.value, null, 2));
+    console.log('AI-Prompts: triggerSequences before save:', settingsForm.value.triggerSequences);
+    
     await storage.saveSettings(toRaw(settingsForm.value));
+    
     const newSettings = await storage.getSettings();
     console.log('AI-Prompts: Re-retrieved settings immediately after save:', newSettings);
-    browser.runtime.sendMessage({ type: 'UPDATE_SETTINGS' });
+    console.log('AI-Prompts: triggerSequences after save:', newSettings.triggerSequences);
+    
+    // 发送消息给所有content scripts
+    console.log('AI-Prompts: Sending UPDATE_SETTINGS message to all tabs');
+    try {
+      const tabs = await browser.tabs.query({});
+      for (const tab of tabs) {
+        if (tab.id) {
+          try {
+            await browser.tabs.sendMessage(tab.id, { type: 'UPDATE_SETTINGS' });
+            console.log(`AI-Prompts: Sent UPDATE_SETTINGS to tab ${tab.id}`);
+          } catch (error) {
+            console.log(`AI-Prompts: Failed to send message to tab ${tab.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('AI-Prompts: Failed to query tabs:', error);
+    }
+    
     showSuccessMessage.value = true;
     setTimeout(() => {
       showSuccessMessage.value = false;

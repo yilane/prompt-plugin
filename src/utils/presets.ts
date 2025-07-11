@@ -1,15 +1,12 @@
 import type { Category, Prompt } from '../types';
 
 export const presetCategories: Category[] = [
-  { id: 'marketing', name: '市场营销', description: '适用于市场营销、广告和社交媒体的内容生成。', icon: '📈', sort: 1, isCustom: false },
-  { id: 'development', name: '软件开发', description: '用于编码、调试和解决技术问题的提示。', icon: '💻', sort: 2, isCustom: false },
-  { id: 'writing', name: '写作', description: '内容创作、润色、摘要等', icon: '✍️', sort: 3, isCustom: false },
-  { id: 'translation', name: '翻译', description: '多语言互译、术语解释', icon: '🌐', sort: 4, isCustom: false },
-  { id: 'education', name: '教育学习', description: '备课、出题、知识点解释', icon: '🎓', sort: 5, isCustom: false },
-  { id: 'daily-life', name: '日常生活', description: '邮件、菜谱、旅游计划', icon: '🏠', sort: 6, isCustom: false },
-  { id: 'entertainment', name: '娱乐', description: '游戏、故事、角色扮演', icon: '🎮', sort: 7, isCustom: false },
-  { id: 'business', name: '商业分析', description: '市场分析、商业计划、报告生成', icon: '💼', sort: 8, isCustom: false },
-  { id: 'custom', name: '自定义', description: '用户自定义的分类', icon: '✨', sort: 99, isCustom: true },
+  { id: 'development', name: '编程', description: '编程相关的提示词', icon: '💻', sort: 1, isCustom: false },
+  { id: 'writing', name: '写作', description: '写作相关的提示词', icon: '✍️', sort: 2, isCustom: false },
+  { id: 'translation', name: '翻译', description: '翻译相关的提示词', icon: '🌐', sort: 3, isCustom: false },
+  { id: 'analysis', name: '分析', description: '数据分析相关的提示词', icon: '📊', sort: 4, isCustom: false },
+  { id: 'creativity', name: '创意', description: '创意策划相关的提示词', icon: '🎨', sort: 5, isCustom: false },
+  { id: 'product', name: '产品', description: '产品管理相关的提示词', icon: '📋', sort: 6, isCustom: false },
 ]
 
 export const presetPrompts: Prompt[] = [
@@ -22,8 +19,6 @@ export const presetPrompts: Prompt[] = [
     tags: ['开发', '代码质量', '审查'],
     isCustom: false,
     useCount: 15,
-    rating: 5,
-    isFavorite: true,
     createTime: String(Date.now()),
     updateTime: String(Date.now()),
   },
@@ -36,8 +31,6 @@ export const presetPrompts: Prompt[] = [
     tags: ['营销', '社交媒体', '内容创作'],
     isCustom: false,
     useCount: 25,
-    rating: 4,
-    isFavorite: false,
     createTime: String(Date.now()),
     updateTime: String(Date.now()),
   },
@@ -50,8 +43,6 @@ export const presetPrompts: Prompt[] = [
     tags: ['写作', '创意', '故事'],
     isCustom: false,
     useCount: 18,
-    rating: 4,
-    isFavorite: false,
     createTime: String(Date.now()),
     updateTime: String(Date.now()),
   },
@@ -64,8 +55,6 @@ export const presetPrompts: Prompt[] = [
     tags: ['商业', '分析', '策略'],
     isCustom: false,
     useCount: 12,
-    rating: 5,
-    isFavorite: false,
     createTime: String(Date.now()),
     updateTime: String(Date.now()),
   },
@@ -78,9 +67,7 @@ export const presetPrompts: Prompt[] = [
     tags: ['教育', '学习', '计划'],
     isCustom: false,
     useCount: 22,
-    rating: 5,
-    isFavorite: false,
     createTime: String(Date.now()),
     updateTime: String(Date.now()),
   },
-] 
+]
