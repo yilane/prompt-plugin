@@ -199,10 +199,20 @@ export default defineContentScript({
       position: 'inline',
       onMount: (container) => {
         const app = createApp(PromptInjector, {
-          onSelect: (content: string) => {
+          onSelect: async (content: string, promptId?: string) => {
             console.log('AI-Prompts: onSelect callback received content:', content)
             console.log('AI-Prompts: targetTextarea:', !!targetTextarea)
             console.log('AI-Prompts: activeTrigger:', activeTrigger)
+            
+            // 更新使用统计
+            if (promptId) {
+              try {
+                await storage.updateUsageStats(promptId)
+                console.log('AI-Prompts: Usage stats updated for prompt:', promptId)
+              } catch (error) {
+                console.error('AI-Prompts: Failed to update usage stats:', error)
+              }
+            }
             
             if (targetTextarea && activeTrigger) {
               console.log('AI-Prompts: Calling insertPromptWithCursorHandling')

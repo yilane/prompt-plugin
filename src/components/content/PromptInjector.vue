@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, defineExpose } from 'vue'
 import { storage } from '../../utils/storage'
+import { recommendationService } from '../../utils/recommendationService'
 import type { Prompt, Category } from '../../types'
 
 const emit = defineEmits<{
-  (e: 'select', content: string): void
+  (e: 'select', content: string, promptId: string): void
 }>()
 
 const prompts = ref<Prompt[]>([])
@@ -47,13 +48,14 @@ const filteredPrompts = computed(() => {
 
 onMounted(async () => {
   try {
-    // 同时加载提示词和分类数据
-    const [allPrompts, allCategories] = await Promise.all([
-      storage.getAllPrompts(),
+    // 同时加载分类数据
+    const [allCategories] = await Promise.all([
       storage.getAllCategories()
     ])
 
-    prompts.value = allPrompts.sort((a, b) => b.useCount - a.useCount)
+    // 使用推荐算法获取排序后的提示词
+    const recommendations = await recommendationService.getHybridRecommendations('', 100)
+    prompts.value = recommendations.map(rec => rec.prompt)
     categories.value = allCategories
   } catch (error) {
     console.error('Failed to load prompts or categories in content script:', error)
@@ -65,7 +67,7 @@ onMounted(async () => {
 const handleSelect = (prompt: Prompt) => {
   console.log('AI-Prompts: handleSelect called with prompt:', prompt.title)
   console.log('AI-Prompts: Emitting select event with content:', prompt.content)
-  emit('select', prompt.content)
+  emit('select', prompt.content, prompt.id)
   hide()
 }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, toRaw } from 'vue'
 import { storage } from '../utils/storage'
+import { recommendationService } from '../utils/recommendationService'
 import type { Prompt, Category } from '../types'
 import PromptCard from '../components/business/PromptCard.vue'
 import Modal from '../components/ui/Modal.vue'
@@ -48,7 +49,21 @@ const filteredPrompts = computed(() => {
     })
   }
 
-  return promptsToFilter
+  // 3. Sort by recommendation algorithm (smart sorting)
+  return promptsToFilter.sort((a, b) => {
+    // Primary sort: useCount (higher is better)
+    const useCountDiff = (b.useCount || 0) - (a.useCount || 0)
+    if (useCountDiff !== 0) return useCountDiff
+    
+    // Secondary sort: updateTime (newer is better)
+    const dateA = new Date(a.updateTime).getTime()
+    const dateB = new Date(b.updateTime).getTime()
+    const timeDiff = dateB - dateA
+    if (timeDiff !== 0) return timeDiff
+    
+    // Tertiary sort: title alphabetically
+    return a.title.localeCompare(b.title)
+  })
 })
 
 const pageProvider = async (pageNumber: number, pageSize: number) => {

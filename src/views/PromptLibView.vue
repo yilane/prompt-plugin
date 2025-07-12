@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { storage } from '../utils/storage';
+import { recommendationService } from '../utils/recommendationService';
 import { presetPrompts, presetCategories } from '../utils/presets';
 import type { Prompt, Category } from '../types';
 import Button from '../components/ui/Button.vue';
@@ -63,8 +64,38 @@ const filteredPrompts = computed(() => {
     });
   }
 
-  return promptsToFilter;
+  // 3. Sort by smart algorithm (similar to HomeView)
+  return promptsToFilter.sort((a, b) => {
+    // For preset prompts, we can score based on keyword relevance
+    const scoreA = calculatePresetPromptScore(a)
+    const scoreB = calculatePresetPromptScore(b)
+    
+    if (scoreA !== scoreB) return scoreB - scoreA
+    
+    // Fallback to alphabetical order
+    return a.title.localeCompare(b.title)
+  })
 });
+
+/**
+ * Calculate score for preset prompt based on search relevance
+ */
+function calculatePresetPromptScore(prompt: Prompt): number {
+  let score = 0
+  
+  // Base score for all prompts
+  score += 10
+  
+  // Boost score if search query matches
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    if (prompt.title.toLowerCase().includes(query)) score += 50
+    if (prompt.content.toLowerCase().includes(query)) score += 30
+    if (prompt.tags.some(tag => tag.toLowerCase().includes(query))) score += 40
+  }
+  
+  return score
+}
 
 async function copyToClipboard(content: string, id: string) {
   if (copiedMap.value[id]) return;

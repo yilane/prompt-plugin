@@ -186,6 +186,13 @@ export class StorageManager {
     }
 
     await this.setToStorage(STORAGE_KEYS.USAGE_STATS, allStats)
+    
+    // 同时更新提示词的 useCount 字段
+    const prompt = await this.getPrompt(promptId)
+    if (prompt) {
+      prompt.useCount = stats.count
+      await this.savePrompt(prompt)
+    }
   }
 
   // Private method for one-time data initialization

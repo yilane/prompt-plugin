@@ -10,6 +10,7 @@ export interface Prompt {
   createTime: string
   updateTime: string
   useCount: number
+  isFavorite?: boolean
   categoryDetails?: Category
 }
 

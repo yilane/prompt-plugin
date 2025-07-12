@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { browser } from 'wxt/browser';
 import { storage } from '../../utils/storage';
+import { recommendationService } from '../../utils/recommendationService';
 import type { Prompt, Category } from '../../types';
 import SearchBox from '../ui/SearchBox.vue';
 
@@ -46,11 +47,13 @@ const filteredPrompts = computed(() => {
 const loadData = async () => {
   isLoading.value = true;
   try {
-    const [loadedPrompts, loadedCategories] = await Promise.all([
-      storage.getAllPrompts(),
+    const [loadedCategories] = await Promise.all([
       storage.getAllCategories(),
     ]);
-    prompts.value = loadedPrompts.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+    
+    // 使用推荐算法获取排序后的提示词
+    const recommendations = await recommendationService.getHybridRecommendations('', 50)
+    prompts.value = recommendations.map(rec => rec.prompt)
     categories.value = loadedCategories.sort((a, b) => a.sort - b.sort);
   } catch (error) {
     console.error('Failed to load side panel data:', error);
