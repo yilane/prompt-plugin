@@ -31,3 +31,4 @@ coverage
 .output
 .wxt
 .claude
+package-lock.json
