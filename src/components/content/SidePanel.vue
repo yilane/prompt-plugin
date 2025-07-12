@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { browser } from 'wxt/browser';
-import { storage } from '../../utils/storage';
-import { recommendationService } from '../../utils/recommendationService';
+import { storage, initializeDatabase } from '../../utils/storage';
 import type { Prompt, Category } from '../../types';
 import SearchBox from '../ui/SearchBox.vue';
 
@@ -47,16 +46,70 @@ const filteredPrompts = computed(() => {
 const loadData = async () => {
   isLoading.value = true;
   try {
-    const [loadedCategories] = await Promise.all([
+    console.log('SidePanel: Starting to load data...');
+    
+    // Check if database is initialized
+    const isInitialized = await storage.getFromStorage('ai-prompts-is-initialized');
+    console.log('SidePanel: Database initialized?', isInitialized);
+    
+    if (!isInitialized) {
+      console.log('SidePanel: Database not initialized, triggering initialization...');
+      // Trigger initialization if not done
+      try {
+        await initializeDatabase();
+        console.log('SidePanel: Database initialization completed');
+        
+        // Verify initialization worked
+        const nowInitialized = await storage.getFromStorage('ai-prompts-is-initialized');
+        console.log('SidePanel: Verification - Database now initialized?', nowInitialized);
+      } catch (initError) {
+        console.error('SidePanel: Failed to initialize database:', initError);
+      }
+    }
+    
+    console.log('SidePanel: Fetching prompts and categories...');
+    const [loadedPrompts, loadedCategories] = await Promise.all([
+      storage.getAllPrompts(),
       storage.getAllCategories(),
     ]);
     
-    // 使用推荐算法获取排序后的提示词
-    const recommendations = await recommendationService.getHybridRecommendations('', 50)
-    prompts.value = recommendations.map(rec => rec.prompt)
+    console.log('SidePanel: Raw data loaded:', {
+      prompts: loadedPrompts.length,
+      categories: loadedCategories.length,
+      promptsData: loadedPrompts,
+      categoriesData: loadedCategories
+    });
+    
+    // 按使用次数和更新时间排序
+    prompts.value = loadedPrompts.sort((a, b) => {
+      // 首先按使用次数排序
+      const useCountDiff = (b.useCount || 0) - (a.useCount || 0);
+      if (useCountDiff !== 0) return useCountDiff;
+      
+      // 然后按更新时间排序
+      const dateA = new Date(a.updateTime).getTime();
+      const dateB = new Date(b.updateTime).getTime();
+      const timeDiff = dateB - dateA;
+      if (timeDiff !== 0) return timeDiff;
+      
+      // 最后按标题排序
+      return a.title.localeCompare(b.title);
+    });
+    
     categories.value = loadedCategories.sort((a, b) => a.sort - b.sort);
+    
+    console.log('SidePanel: Data loaded and sorted successfully', {
+      finalPrompts: prompts.value.length,
+      finalCategories: categories.value.length,
+      categoriesDetails: categories.value.map(c => ({ id: c.id, name: c.name }))
+    });
   } catch (error) {
-    console.error('Failed to load side panel data:', error);
+    console.error('SidePanel: Failed to load data:', error);
+    console.error('SidePanel: Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
   } finally {
     isLoading.value = false;
   }
@@ -247,8 +300,28 @@ onMounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="margin: 0 auto 16px; color: #d1d5db;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <p>暂无提示词</p>
-          <p :style="{ fontSize: '14px', color: '#9ca3af', marginTop: '4px' }">试试调整搜索条件</p>
+          <p v-if="prompts.length === 0">暂无提示词</p>
+          <p v-else>暂无匹配的提示词</p>
+          <p :style="{ fontSize: '14px', color: '#9ca3af', marginTop: '4px' }">
+            <span v-if="prompts.length === 0">请到管理面板添加提示词</span>
+            <span v-else>试试调整搜索条件</span>
+          </p>
+          <button 
+            v-if="prompts.length === 0"
+            @click="openDashboard"
+            :style="{
+              marginTop: '16px',
+              padding: '8px 16px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }"
+          >
+            去添加提示词
+          </button>
         </div>
 
         <!-- 提示词卡片列表 -->

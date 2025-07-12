@@ -26,8 +26,12 @@ export default defineConfig({
       'https://*/*',
       'http://*/*',
       'https://chat.openai.com/*',
+      'https://chatgpt.com/*',
       'https://claude.ai/*',
       'https://gemini.google.com/*',
+      'https://bard.google.com/*',
+      'https://ai.google.dev/*',
+      'https://makersuite.google.com/*',
       'https://chat.deepseek.com/*',
       'https://www.doubao.com/*',
       'http://localhost/*',
@@ -65,4 +69,11 @@ export default defineConfig({
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5699; sandbox allow-scripts allow-forms allow-popups allow-modals; child-src 'self';",
     },
   },
+  // 多浏览器构建配置
+  runner: {
+    disabled: true
+  },
+  zip: {
+    exclude: ['**/.DS_Store', '**/Thumbs.db', '**/*.log']
+  }
 });

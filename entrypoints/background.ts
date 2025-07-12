@@ -24,14 +24,14 @@ export default defineBackground({
       }
     });
 
-    // Initialize database with proper error handling
-    setTimeout(async () => {
+    // Initialize database
+    (async () => {
       try {
         await initializeDatabase();
-        console.log('AI-Prompts: Database initialized successfully from background.');
+        console.log('AI-Prompts: Database initialized successfully.');
       } catch (error) {
-        console.error('AI-Prompts: Database initialization failed from background:', error);
-        // Retry after a delay
+        console.error('AI-Prompts: Database initialization failed:', error);
+        // Retry once after a delay
         setTimeout(async () => {
           try {
             await initializeDatabase();
@@ -41,6 +41,14 @@ export default defineBackground({
           }
         }, 2000);
       }
-    }, 1000);
+    })();
+
+    // Handle messages from content scripts and other parts of the extension
+    browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+      console.log('AI-Prompts: Received message in background:', message);
+      
+      // Handle other extension messages as needed
+      return true;
+    });
   }
 });

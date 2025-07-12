@@ -1,5 +1,9 @@
-import type { Prompt, Category, Settings, UsageStats } from '../types'
+import type { Prompt, Category, Settings, UsageStats, KeyboardShortcut } from '../types'
 import { browser } from 'wxt/browser'
+import { csvProcessor, type CSVExportOptions } from './csvProcessor'
+import { browserCompatibility } from './browserCompatibility'
+// Note: offlineCache import is commented out to avoid circular dependencies
+// import { offlineCacheManager } from './offlineCache'
 
 const STORAGE_KEYS = {
   PROMPTS: 'ai-prompts-prompts',
@@ -10,6 +14,13 @@ const STORAGE_KEYS = {
 } as const
 
 export class StorageManager {
+  private storageAPI: any
+
+  constructor() {
+    // 使用兼容的存储API
+    this.storageAPI = browserCompatibility.getStorageAPI()
+  }
+
   // 初始化 - chrome.storage不需要初始化
   async init(): Promise<void> {
     // chrome.storage API 不需要初始化
@@ -18,7 +29,7 @@ export class StorageManager {
 
   // 通用的存储操作方法
   public async getFromStorage<T>(key: string): Promise<T | undefined> {
-    const result = await browser.storage.local.get(key)
+    const result = await this.storageAPI.get(key)
     if (result && typeof result === 'object' && key in result) {
       return result[key] as T;
     }
@@ -26,7 +37,7 @@ export class StorageManager {
   }
 
   private async setToStorage<T>(key: string, value: T): Promise<void> {
-    await browser.storage.local.set({ [key]: value })
+    await this.storageAPI.set({ [key]: value })
   }
 
   // 提示词相关操作
@@ -141,6 +152,11 @@ export class StorageManager {
       delete (finalSettings as any).triggerKey;
     }
 
+    // Ensure keyboardShortcuts exist (for backward compatibility)
+    if (!finalSettings.keyboardShortcuts || finalSettings.keyboardShortcuts.length === 0) {
+      finalSettings.keyboardShortcuts = defaultSettings.keyboardShortcuts;
+    }
+
     return finalSettings;
   }
 
@@ -150,12 +166,48 @@ export class StorageManager {
   }
 
   private getDefaultSettings(): Settings {
+    const defaultKeyboardShortcuts: KeyboardShortcut[] = [
+      {
+        id: 'shortcut-open-dashboard',
+        name: '打开管理面板',
+        description: '打开提示词管理面板',
+        keys: 'Ctrl+Shift+P',
+        action: 'open_dashboard',
+        enabled: true
+      },
+      {
+        id: 'shortcut-open-sidepanel',
+        name: '打开侧边栏',
+        description: '打开提示词侧边栏',
+        keys: 'Ctrl+Shift+S',
+        action: 'open_sidepanel',
+        enabled: true
+      },
+      {
+        id: 'shortcut-toggle-prompts',
+        name: '快速选择提示词',
+        description: '在当前页面快速选择并插入提示词',
+        keys: 'Ctrl+Shift+I',
+        action: 'toggle_prompt_selector',
+        enabled: true
+      },
+      {
+        id: 'shortcut-search-prompts',
+        name: '搜索提示词',
+        description: '打开提示词搜索界面',
+        keys: 'Ctrl+Shift+F',
+        action: 'search_prompts',
+        enabled: true
+      }
+    ]
+
     return {
       theme: 'system',
       language: 'zh',
       triggerSequences: [{ id: 'default-1', value: '@@', enabled: true }],
       enableQuickInsert: true,
       enableKeyboardShortcuts: true,
+      keyboardShortcuts: defaultKeyboardShortcuts,
       enableNotifications: true,
       autoBackup: false,
       maxRecentPrompts: 10
@@ -229,6 +281,115 @@ export class StorageManager {
     })
   }
 
+  // CSV格式导出
+  async exportDataAsCSV(type: 'prompts' | 'categories' | 'both' = 'both', options: CSVExportOptions = {}): Promise<{ prompts?: string; categories?: string }> {
+    const [prompts, categories] = await Promise.all([
+      this.getAllPrompts(),
+      this.getAllCategories()
+    ])
+
+    const result: { prompts?: string; categories?: string } = {}
+
+    if (type === 'prompts' || type === 'both') {
+      result.prompts = csvProcessor.exportPromptsToCSV(prompts, categories, options)
+    }
+
+    if (type === 'categories' || type === 'both') {
+      result.categories = csvProcessor.exportCategoriesToCSV(categories, options.delimiter)
+    }
+
+    return result
+  }
+
+  // CSV格式导入
+  async importDataFromCSV(csvContent: string, type: 'prompts' | 'categories'): Promise<{ success: boolean; errors: string[]; warnings: string[]; imported: number }> {
+    try {
+      if (type === 'prompts') {
+        const result = csvProcessor.importPromptsFromCSV(csvContent)
+        
+        if (result.errors.length > 0) {
+          return {
+            success: false,
+            errors: result.errors,
+            warnings: result.warnings,
+            imported: 0
+          }
+        }
+
+        // 导入提示词
+        let importedCount = 0
+        const existingPrompts = await this.getAllPrompts()
+        const existingTitles = new Set(existingPrompts.map(p => p.title))
+
+        for (const prompt of result.prompts) {
+          if (!existingTitles.has(prompt.title)) {
+            prompt.id = this.generateId()
+            await this.savePrompt(prompt)
+            importedCount++
+          } else {
+            result.warnings.push(`提示词 "${prompt.title}" 已存在，跳过导入`)
+          }
+        }
+
+        return {
+          success: true,
+          errors: result.errors,
+          warnings: result.warnings,
+          imported: importedCount
+        }
+
+      } else if (type === 'categories') {
+        const result = csvProcessor.importCategoriesFromCSV(csvContent)
+        
+        if (result.errors.length > 0) {
+          return {
+            success: false,
+            errors: result.errors,
+            warnings: result.warnings,
+            imported: 0
+          }
+        }
+
+        // 导入分类
+        let importedCount = 0
+        const existingCategories = await this.getAllCategories()
+        const existingNames = new Set(existingCategories.map(c => c.name))
+
+        for (const category of result.categories) {
+          if (!existingNames.has(category.name)) {
+            category.id = this.generateId()
+            await this.saveCategory(category)
+            importedCount++
+          } else {
+            result.warnings.push(`分类 "${category.name}" 已存在，跳过导入`)
+          }
+        }
+
+        return {
+          success: true,
+          errors: result.errors,
+          warnings: result.warnings,
+          imported: importedCount
+        }
+      }
+
+      return {
+        success: false,
+        errors: ['不支持的导入类型'],
+        warnings: [],
+        imported: 0
+      }
+
+    } catch (error) {
+      return {
+        success: false,
+        errors: [`导入失败：${error}`],
+        warnings: [],
+        imported: 0
+      }
+    }
+  }
+
   async importData(jsonData: string): Promise<void> {
     const importObject = JSON.parse(jsonData)
     const {
@@ -292,7 +453,7 @@ export class StorageManager {
 
   // 清空所有数据
   async clearAllData(): Promise<void> {
-    await browser.storage.local.remove([
+    await this.storageAPI.remove([
       STORAGE_KEYS.PROMPTS,
       STORAGE_KEYS.CATEGORIES,
       STORAGE_KEYS.SETTINGS,

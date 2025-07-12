@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, defineExpose } from 'vue'
 import { storage } from '../../utils/storage'
-import { recommendationService } from '../../utils/recommendationService'
 import type { Prompt, Category } from '../../types'
 
 const emit = defineEmits<{
@@ -48,17 +47,65 @@ const filteredPrompts = computed(() => {
 
 onMounted(async () => {
   try {
-    // 同时加载分类数据
-    const [allCategories] = await Promise.all([
+    console.log('PromptInjector: Starting to load data...')
+    
+    // 检查数据库是否已初始化
+    const isInitialized = await storage.getFromStorage('ai-prompts-is-initialized')
+    console.log('PromptInjector: Database initialized?', isInitialized)
+    
+    if (!isInitialized) {
+      console.log('PromptInjector: Database not initialized, triggering initialization...')
+      try {
+        const { initializeDatabase } = await import('../../utils/storage')
+        await initializeDatabase()
+        console.log('PromptInjector: Database initialization completed')
+      } catch (initError) {
+        console.error('PromptInjector: Failed to initialize database:', initError)
+      }
+    }
+    
+    // 直接从storage加载数据，不依赖推荐服务
+    const [allPrompts, allCategories] = await Promise.all([
+      storage.getAllPrompts(),
       storage.getAllCategories()
     ])
 
-    // 使用推荐算法获取排序后的提示词
-    const recommendations = await recommendationService.getHybridRecommendations('', 100)
-    prompts.value = recommendations.map(rec => rec.prompt)
-    categories.value = allCategories
+    console.log('PromptInjector: Loaded data:', {
+      prompts: allPrompts.length,
+      categories: allCategories.length,
+      promptsData: allPrompts,
+      categoriesData: allCategories
+    })
+
+    // 按使用次数和更新时间排序提示词
+    prompts.value = allPrompts.sort((a, b) => {
+      // 首先按使用次数排序
+      const useCountDiff = (b.useCount || 0) - (a.useCount || 0)
+      if (useCountDiff !== 0) return useCountDiff
+      
+      // 然后按更新时间排序
+      const dateA = new Date(a.updateTime).getTime()
+      const dateB = new Date(b.updateTime).getTime()
+      const timeDiff = dateB - dateA
+      if (timeDiff !== 0) return timeDiff
+      
+      // 最后按标题排序
+      return a.title.localeCompare(b.title)
+    })
+    
+    categories.value = allCategories.sort((a, b) => a.sort - b.sort)
+    
+    console.log('PromptInjector: Data loaded successfully:', {
+      finalPrompts: prompts.value.length,
+      finalCategories: categories.value.length
+    })
   } catch (error) {
-    console.error('Failed to load prompts or categories in content script:', error)
+    console.error('PromptInjector: Failed to load prompts or categories:', error)
+    console.error('PromptInjector: Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
   } finally {
     isLoading.value = false
   }

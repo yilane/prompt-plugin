@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompts - 平台兼容性调试工具</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .debug-section {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .debug-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .status.error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .status.warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #f2f2f2;
+        }
+        .result-pass { color: #28a745; }
+        .result-fail { color: #dc3545; }
+        .result-unknown { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <h1>🔧 AI Prompts 平台兼容性调试工具</h1>
+    
+    <div class="debug-section">
+        <h2>🌐 当前环境信息</h2>
+        <div id="environmentInfo"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🎯 平台检测结果</h2>
+        <button onclick="detectPlatform()">检测当前平台</button>
+        <div id="platformInfo"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🔍 元素查找测试</h2>
+        <button onclick="findElements()">查找输入元素</button>
+        <div id="elementInfo"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>💾 数据存储测试</h2>
+        <button onclick="testStorage()">测试数据加载</button>
+        <div id="storageInfo"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🧪 兼容性测试</h2>
+        <button onclick="runCompatibilityTests()">运行完整测试</button>
+        <div id="compatibilityResults"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>📝 调试日志</h2>
+        <button onclick="clearLogs()">清空日志</button>
+        <button onclick="exportLogs()">导出日志</button>
+        <div class="debug-output" id="debugOutput"></div>
+    </div>
+
+    <script>
+        let logs = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            logs.push(logEntry);
+            
+            const output = document.getElementById('debugOutput');
+            output.textContent = logs.join('\n');
+            output.scrollTop = output.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById('debugOutput').textContent = '';
+        }
+
+        function exportLogs() {
+            const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-prompts-debug-${Date.now()}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showEnvironmentInfo() {
+            const info = {
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                domain: window.location.hostname,
+                timestamp: new Date().toISOString(),
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                language: navigator.language
+            };
+
+            const html = `
+                <table>
+                    <tr><th>属性</th><th>值</th></tr>
+                    ${Object.entries(info).map(([key, value]) => 
+                        `<tr><td>${key}</td><td>${value}</td></tr>`
+                    ).join('')}
+                </table>
+            `;
+            
+            document.getElementById('environmentInfo').innerHTML = html;
+            log('Environment info displayed');
+        }
+
+        async function detectPlatform() {
+            try {
+                log('Starting platform detection...');
+                
+                // 检测扩展环境
+                const isExtension = typeof chrome !== 'undefined' && chrome.runtime;
+                
+                if (!isExtension) {
+                    document.getElementById('platformInfo').innerHTML = 
+                        '<div class="status error">⚠️ 扩展环境未检测到。请确保在已安装扩展的浏览器中运行此工具。</div>';
+                    log('Extension environment not detected', 'error');
+                    return;
+                }
+
+                // 模拟平台检测逻辑
+                const hostname = window.location.hostname;
+                const url = window.location.href;
+                
+                let detectedPlatform = 'unknown';
+                const platformPatterns = {
+                    'ChatGPT': ['chat.openai.com', 'chatgpt.com'],
+                    'Claude': ['claude.ai'],
+                    'Gemini': ['gemini.google.com', 'bard.google.com'],
+                    'DeepSeek': ['chat.deepseek.com'],
+                    'Doubao': ['www.doubao.com']
+                };
+
+                for (const [platform, domains] of Object.entries(platformPatterns)) {
+                    if (domains.some(domain => hostname.includes(domain))) {
+                        detectedPlatform = platform;
+                        break;
+                    }
+                }
+
+                const html = `
+                    <div class="status ${detectedPlatform === 'unknown' ? 'warning' : 'success'}">
+                        🎯 检测到平台: <strong>${detectedPlatform}</strong>
+                    </div>
+                    <table>
+                        <tr><th>属性</th><th>值</th></tr>
+                        <tr><td>域名</td><td>${hostname}</td></tr>
+                        <tr><td>完整URL</td><td>${url}</td></tr>
+                        <tr><td>检测结果</td><td>${detectedPlatform}</td></tr>
+                    </table>
+                `;
+
+                document.getElementById('platformInfo').innerHTML = html;
+                log(`Platform detected: ${detectedPlatform} on ${hostname}`);
+                
+            } catch (error) {
+                log(`Platform detection failed: ${error.message}`, 'error');
+                document.getElementById('platformInfo').innerHTML = 
+                    `<div class="status error">❌ 平台检测失败: ${error.message}</div>`;
+            }
+        }
+
+        function findElements() {
+            try {
+                log('Starting element search...');
+                
+                // DeepSeek 特定选择器
+                const deepseekSelectors = [
+                    'textarea[placeholder*="请输入您的问题"]',
+                    'textarea[placeholder*="Send a message"]',
+                    'div[contenteditable="true"]',
+                    'textarea:not([readonly]):not([disabled])'
+                ];
+
+                // 通用选择器
+                const genericSelectors = [
+                    'textarea',
+                    'input[type="text"]',
+                    'div[contenteditable="true"]'
+                ];
+
+                const allSelectors = [...deepseekSelectors, ...genericSelectors];
+                const results = [];
+
+                allSelectors.forEach((selector, index) => {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        results.push({
+                            selector,
+                            count: elements.length,
+                            elements: Array.from(elements).map((el, i) => ({
+                                tag: el.tagName,
+                                id: el.id || '(无)',
+                                className: el.className || '(无)',
+                                placeholder: el.placeholder || '(无)',
+                                visible: el.offsetWidth > 0 && el.offsetHeight > 0,
+                                rect: el.getBoundingClientRect()
+                            }))
+                        });
+                        log(`Selector "${selector}" found ${elements.length} elements`);
+                    } catch (error) {
+                        results.push({
+                            selector,
+                            error: error.message
+                        });
+                        log(`Selector "${selector}" failed: ${error.message}`, 'error');
+                    }
+                });
+
+                const html = results.map(result => {
+                    if (result.error) {
+                        return `
+                            <div class="status error">
+                                <strong>❌ ${result.selector}</strong><br>
+                                错误: ${result.error}
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="status ${result.count > 0 ? 'success' : 'warning'}">
+                            <strong>${result.count > 0 ? '✅' : '⚠️'} ${result.selector}</strong> (${result.count} 个元素)<br>
+                            ${result.elements.map((el, i) => `
+                                <div style="margin-left: 20px; font-size: 12px;">
+                                    ${i + 1}. ${el.tag} - ID: ${el.id} - 可见: ${el.visible ? '是' : '否'}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('elementInfo').innerHTML = html;
+                log(`Element search completed. Found ${results.reduce((sum, r) => sum + (r.count || 0), 0)} total elements`);
+
+            } catch (error) {
+                log(`Element search failed: ${error.message}`, 'error');
+                document.getElementById('elementInfo').innerHTML = 
+                    `<div class="status error">❌ 元素查找失败: ${error.message}</div>`;
+            }
+        }
+
+        async function testStorage() {
+            try {
+                log('Starting storage test...');
+                
+                // 检查扩展API
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension APIs not available');
+                }
+
+                // 测试存储读写
+                const testKey = 'ai-prompts-debug-test';
+                const testData = { timestamp: Date.now(), test: true };
+
+                // 写入测试
+                await chrome.storage.local.set({ [testKey]: testData });
+                log('Storage write test passed');
+
+                // 读取测试
+                const result = await chrome.storage.local.get(testKey);
+                if (result[testKey] && result[testKey].test === true) {
+                    log('Storage read test passed');
+                } else {
+                    throw new Error('Storage read test failed');
+                }
+
+                // 清理测试数据
+                await chrome.storage.local.remove(testKey);
+
+                // 检查实际数据
+                const actualData = await chrome.storage.local.get([
+                    'ai-prompts-prompts',
+                    'ai-prompts-categories',
+                    'ai-prompts-is-initialized'
+                ]);
+
+                const prompts = actualData['ai-prompts-prompts'] || [];
+                const categories = actualData['ai-prompts-categories'] || [];
+                const isInitialized = actualData['ai-prompts-is-initialized'] || false;
+
+                const html = `
+                    <div class="status success">✅ 存储测试通过</div>
+                    <table>
+                        <tr><th>数据类型</th><th>状态</th><th>数量</th></tr>
+                        <tr><td>数据库初始化</td><td class="${isInitialized ? 'result-pass' : 'result-fail'}">${isInitialized ? '✅ 已初始化' : '❌ 未初始化'}</td><td>-</td></tr>
+                        <tr><td>提示词</td><td class="${prompts.length > 0 ? 'result-pass' : 'result-fail'}">${prompts.length > 0 ? '✅ 有数据' : '❌ 无数据'}</td><td>${prompts.length}</td></tr>
+                        <tr><td>分类</td><td class="${categories.length > 0 ? 'result-pass' : 'result-fail'}">${categories.length > 0 ? '✅ 有数据' : '❌ 无数据'}</td><td>${categories.length}</td></tr>
+                    </table>
+                `;
+
+                document.getElementById('storageInfo').innerHTML = html;
+                log(`Storage test completed. Prompts: ${prompts.length}, Categories: ${categories.length}, Initialized: ${isInitialized}`);
+
+            } catch (error) {
+                log(`Storage test failed: ${error.message}`, 'error');
+                document.getElementById('storageInfo').innerHTML = 
+                    `<div class="status error">❌ 存储测试失败: ${error.message}</div>`;
+            }
+        }
+
+        async function runCompatibilityTests() {
+            try {
+                log('Starting compatibility tests...');
+                
+                const tests = [
+                    { name: '扩展环境', test: () => typeof chrome !== 'undefined' && chrome.runtime },
+                    { name: '存储API', test: async () => {
+                        try {
+                            await chrome.storage.local.get('test');
+                            return true;
+                        } catch { return false; }
+                    }},
+                    { name: '内容脚本注入', test: () => document.querySelector('script[src*="content"]') !== null },
+                    { name: 'DOM观察器', test: () => typeof MutationObserver !== 'undefined' },
+                    { name: '剪贴板API', test: () => typeof navigator.clipboard !== 'undefined' },
+                    { name: '输入元素', test: () => {
+                        const textarea = document.querySelector('textarea:not([readonly]):not([disabled])');
+                        const contenteditable = document.querySelector('div[contenteditable="true"]');
+                        return textarea !== null || contenteditable !== null;
+                    }}
+                ];
+
+                const results = [];
+                for (const test of tests) {
+                    try {
+                        const result = typeof test.test === 'function' ? await test.test() : test.test;
+                        results.push({ name: test.name, passed: result, error: null });
+                        log(`Test "${test.name}": ${result ? 'PASS' : 'FAIL'}`);
+                    } catch (error) {
+                        results.push({ name: test.name, passed: false, error: error.message });
+                        log(`Test "${test.name}": ERROR - ${error.message}`, 'error');
+                    }
+                }
+
+                const passedTests = results.filter(r => r.passed).length;
+                const totalTests = results.length;
+                const score = Math.round((passedTests / totalTests) * 100);
+
+                const html = `
+                    <div class="status ${score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'}">
+                        🧪 兼容性得分: ${score}% (${passedTests}/${totalTests} 测试通过)
+                    </div>
+                    <table>
+                        <tr><th>测试项</th><th>结果</th><th>错误信息</th></tr>
+                        ${results.map(r => `
+                            <tr>
+                                <td>${r.name}</td>
+                                <td class="${r.passed ? 'result-pass' : 'result-fail'}">${r.passed ? '✅ 通过' : '❌ 失败'}</td>
+                                <td>${r.error || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+
+                document.getElementById('compatibilityResults').innerHTML = html;
+                log(`Compatibility tests completed. Score: ${score}%`);
+
+            } catch (error) {
+                log(`Compatibility tests failed: ${error.message}`, 'error');
+                document.getElementById('compatibilityResults').innerHTML = 
+                    `<div class="status error">❌ 兼容性测试失败: ${error.message}</div>`;
+            }
+        }
+
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Debug tool loaded');
+            showEnvironmentInfo();
+        });
+    </script>
+</body>
+</html>

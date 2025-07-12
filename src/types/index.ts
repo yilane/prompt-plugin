@@ -31,6 +31,16 @@ export interface TriggerSequence {
   enabled: boolean
 }
 
+// 全局键盘快捷键
+export interface KeyboardShortcut {
+  id: string
+  name: string
+  description: string
+  keys: string
+  action: string
+  enabled: boolean
+}
+
 // 用户设置
 export interface Settings {
   theme: 'light' | 'dark' | 'system'
@@ -38,6 +48,7 @@ export interface Settings {
   triggerSequences: TriggerSequence[]
   enableQuickInsert: boolean
   enableKeyboardShortcuts: boolean
+  keyboardShortcuts: KeyboardShortcut[]
   enableNotifications: boolean
   autoBackup: boolean
   maxRecentPrompts: number
